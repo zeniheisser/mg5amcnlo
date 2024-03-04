@@ -8666,6 +8666,14 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                                 self._generate_info)
 
 
+
+        if self._export_format == 'plugin':
+            if type(self._curr_exporter).__name__ == 'RWGT_ProcessExporter':
+                for me in self._curr_matrix_elements.get_matrix_elements():
+                    self._curr_exporter.export_driver()
+#                    misc.sprint(type(me.get('processes')[0]))
+#                    misc.sprint(me.get('processes')[0].get_process_name())
+
         cpu_time2 = time.time() - cpu_time1
 
         logger.info(("Generated helas calls for %d subprocesses " + \
