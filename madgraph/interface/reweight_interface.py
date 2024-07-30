@@ -119,6 +119,7 @@ class ReweightInterface(extended_cmd.Cmd):
         self.exitted = False # Flag to know if do_quit was already called.
         self.keep_ordering = False
         self.use_eventid = False
+        self.gpucpp = False
         if event_path:
             logger.info("Extracting the banner ...")
             self.do_import(event_path, allow_madspin=allow_madspin)
@@ -426,6 +427,8 @@ class ReweightInterface(extended_cmd.Cmd):
             if args[1].lower() not in ['average', 'max', 'crash']:
                 raise Exception("option identical_particle_in_prod_and_decay can only be one of the following ['average', 'max', 'crash']")
             self.options[args[0]] = args[1].lower()
+        elif args[0] == "gpucpp":
+            self.gpucpp = banner.ConfigFile.format_variable(args[1], bool, "gpucpp")
         else:
             logger.critical("unknown option! %s.  Discard line." % args[0])
         
@@ -504,6 +507,9 @@ class ReweightInterface(extended_cmd.Cmd):
             else:
                 self.create_standalone_directory()
                 self.compile()
+                if(self.gpucpp == True):
+                    self.do_gpucpp_launch()
+                    return
                 self.load_module()  
                 if self.multicore == 'create':
                     self.load_module()
@@ -708,6 +714,60 @@ class ReweightInterface(extended_cmd.Cmd):
         
         self.options['rwgt_name'] = None
 
+    def do_gpucpp_launch(self):
+        """Calling the compiled teawREX reweighting executable"""
+        if self.rwgt_dir:
+            path_me =self.rwgt_dir
+        else:
+            path_me = self.me_dir
+        
+        if self.second_model or self.second_process or self.dedicated_path:
+            rw_dir = pjoin(path_me, 'rw_me_%s' % self.nb_library)
+        else:
+            rw_dir = pjoin(path_me, 'rw_me')
+        
+        input_file = self.lhe_input.path
+        output_file = input_file + 'rw'
+        run_path = pjoin(rw_dir, 'SubProcesses')
+        card_path = pjoin(path_me, 'Cards')
+        param_card = pjoin(card_path, 'param_card.dat')
+        
+        #ZW: Exceptions, making sure all the necessary files for teawREX are accessible
+        if( misc.is_executable(pjoin(run_path,'rwgt_driver_gpu.exe')) ):
+            driver = pjoin(run_path,'rwgt_driver_gpu.exe')
+        elif(misc.is_executable(pjoin(run_path,'rwgt_driver_cpp.exe')) ):
+            driver = pjoin(run_path,'rwgt_driver_cpp.exe')
+        else:
+            raise Exception('No teawREX driver found for parallel reweighting')
+        if not os.path.exists(param_card):
+            try:
+                files.cp(os.path.join(card_path, 'param_card_default.dat'), param_card)
+            except:
+                raise Exception("No param_card.dat file found in %s" % card_path)
+        rwgt_card = os.path.join(card_path, 'reweight_card.dat')
+        if not os.path.exists(rwgt_card):
+            try:
+                files.cp(os.path.join(card_path, 'reweight_card_default.dat'), rwgt_card)
+            except:
+                raise Exception("No reweight_card.dat file found in %s" % card_path)
+        
+        
+        target = ''
+        if not self.mother:
+            name, ext = self.lhe_input.name.rsplit('.',1)
+            target = '%s_out.%s' % (name, ext)            
+        elif self.output_type != "default" :
+            target = pjoin(self.mother.me_dir, 'Events', self.mother.run_name, 'events.lhe')
+        else:
+            target = self.lhe_input.name
+        
+        #ZW: rwgt_driver is written and compiled properly, now just to figure out how to run it through MG
+        subprocess.call([driver, '-lhe=%s' % input_file, '-slha=%s' % param_card, '-rwgt=%s' % rwgt_card, '-out=%s' % output_file], cwd=run_path)
+        
+        files.mv(output_file, target)
+        
+        return
+        
 
     def handle_param_card(self, model_line, args, type_rwgt):
         
@@ -1498,8 +1558,12 @@ class ReweightInterface(extended_cmd.Cmd):
             misc.sprint(type(error))
             raise
         
-        commandline = 'output standalone_rw %s --prefix=int' % pjoin(path_me,data['paths'][0])
-        mgcmd.exec_cmd(commandline, precmd=True)        
+        if (self.gpucpp == True):
+            commandline = 'output standalone_rwgtcpp %s' % pjoin(path_me,data['paths'][0])
+            mgcmd.exec_cmd(commandline, precmd=True)   
+        else:
+            commandline = 'output standalone_rw %s --prefix=int' % pjoin(path_me,data['paths'][0])
+            mgcmd.exec_cmd(commandline, precmd=True)        
         logger.info('Done %.4g' % (time.time()-start))
         self.has_standalone_dir = True
         
@@ -1842,14 +1906,21 @@ class ReweightInterface(extended_cmd.Cmd):
                 nb_core = self.mother.options['nb_core'] if self.mother.options['run_mode'] !=0 else 1
             else:
                 nb_core = 1
-            os.environ['MENUM'] = '2'
-            misc.compile(['allmatrix2py.so'], cwd=pdir, nb_core=nb_core)
-            if not (self.second_model or self.second_process or self.dedicated_path):
-                os.environ['MENUM'] = '3'
-                misc.compile(['allmatrix3py.so'], cwd=pdir, nb_core=nb_core)
+            if(self.gpucpp == True):
+                misc.compile(cwd=pdir, nb_core=nb_core,mode='cpp')
+                return
+            else:
+                os.environ['MENUM'] = '2'
+                misc.compile(['allmatrix2py.so'], cwd=pdir, nb_core=nb_core)
+                if not (self.second_model or self.second_process or self.dedicated_path):
+                    os.environ['MENUM'] = '3'
+                    misc.compile(['allmatrix3py.so'], cwd=pdir, nb_core=nb_core)
 
     def load_module(self, metag=1):
         """load the various module and load the associate information"""
+        
+        if(self.gpucpp == True):
+            return
         
         if not self.rwgt_dir:
             path_me = self.me_dir

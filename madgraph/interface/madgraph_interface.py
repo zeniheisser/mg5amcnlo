@@ -8672,7 +8672,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
 #                for me in self._curr_matrix_elements.get_matrix_elements():
                 self._curr_exporter.export_driver()
 #                misc.sprint(self._export_dir)
-                files.cp(pjoin(self._export_dir, 'SubProcesses', 'cudacpp_rex_driver.mk'),pjoin(self._export_dir, 'SubProcesses', 'makefile'))
+                files.cp(pjoin(self._export_dir, 'SubProcesses', 'cudacpp_driver.mk'),pjoin(self._export_dir, 'SubProcesses', 'makefile'))
 
         cpu_time2 = time.time() - cpu_time1
 
