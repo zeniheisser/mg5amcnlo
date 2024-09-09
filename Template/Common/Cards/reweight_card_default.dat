@@ -19,6 +19,8 @@
 
 change mode NLO    # Define type of Reweighting. For LO sample this command
                    # has no effect since only "LO" mode is allowed.
+
+change gpucpp True
                    
 launch
 #  SPECIFY A PATH OR USE THE SET COMMAND LIKE THIS:

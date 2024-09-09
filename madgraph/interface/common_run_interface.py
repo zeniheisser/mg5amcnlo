@@ -2011,11 +2011,15 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     split_line = line.split()
                     if len(split_line) > 2: 
                         multicore = bool(split_line[2])
+                if line.startswith('change') and line[6:].strip().startswith('gpucpp'):
+                    split_line = line.split()
+                    if len(split_line) > 2:
+                        multicore = not bool(split_line[2])
             # we have reached the first launch in the card ensure that no output change 
             #are done after that point.
             lines = [line[6:].strip() for line in lines if line.startswith('change')]
             for line in lines:
-                if line.startswith(('process','model','output', 'rwgt_dir')):
+                if line.startswith(('process','model','output', 'rwgt_dir', 'gpucpp')):
                     return False
                 elif line.startswith('multicore'):
                     split_line = line.split()

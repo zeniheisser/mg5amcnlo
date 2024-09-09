@@ -432,6 +432,55 @@ class ReweightInterface(extended_cmd.Cmd):
         else:
             logger.critical("unknown option! %s.  Discard line." % args[0])
         
+    def import_command_file(self, filepath):
+        # remove this call from history
+        if self.history:
+            self.history.pop()
+        
+        #avoid that command of other file interfere with this one.
+        previous_store_line = self.get_stored_line()
+        
+        # Read the lines of the file and execute them
+        if isinstance(filepath, str):
+            commandline = open(filepath).readlines()
+        else:
+            commandline = filepath
+        oldinputfile = self.inputfile
+        oldraw = self.use_rawinput
+        self.inputfile = (l for l in commandline) # make a generator
+        self.use_rawinput = False
+        # Note using "for line in open(filepath)" is not safe since the file
+        # filepath can be overwritten during the run (leading to weird results)
+        # Note also that we need a generator and not a list.
+        for line in self.inputfile:
+            #remove pointless spaces and \n
+            if( self.gpucpp ):
+                break
+            line = line.replace('\n', '').strip()
+            # execute the line
+            if line:
+                self.exec_cmd(line, precmd=True)
+            stored = self.get_stored_line()
+            while stored:
+                line = stored
+                self.exec_cmd(line, precmd=True)
+                stored = self.get_stored_line()
+
+        if( self.gpucpp ):
+            self.exec_cmd('launch', precmd=True)
+        
+        # If a child was open close it
+        if self.child:
+            self.child.exec_cmd('quit')        
+        self.inputfile = oldinputfile
+        self.use_rawinput = oldraw   
+        
+        # restore original store line
+        cmd = self
+        while hasattr(cmd, 'mother') and cmd.mother:
+            cmd = cmd.mother
+        cmd.stored_line = previous_store_line
+        return
              
     def check_launch(self, args):
         """check the validity of the launch command"""
@@ -507,16 +556,18 @@ class ReweightInterface(extended_cmd.Cmd):
             else:
                 self.create_standalone_directory()
                 self.compile()
-                if(self.gpucpp == True):
-                    self.do_gpucpp_launch()
-                    return
-                self.load_module()  
-                if self.multicore == 'create':
-                    self.load_module()
-                    if not self.rwgt_dir:
-                        self.rwgt_dir = self.me_dir
-                    self.save_to_pickle()      
+                if(self.gpucpp == False):
+                    self.load_module()  
+                    if self.multicore == 'create':
+                        self.load_module()
+                        if not self.rwgt_dir:
+                            self.rwgt_dir = self.me_dir
+                        self.save_to_pickle()      
 
+        if(self.gpucpp == True):
+            self.do_gpucpp_launch()
+            return
+          
         # get the mode of reweighting #LO/NLO/NLO_tree/...
         type_rwgt = self.get_weight_names()
         # get iterator over param_card and the name associated to the current reweighting.
@@ -531,7 +582,7 @@ class ReweightInterface(extended_cmd.Cmd):
             rw_dir = pjoin(path_me, 'rw_me_%s' % self.nb_library)
         else:
             rw_dir = pjoin(path_me, 'rw_me')
-                
+        
         start = time.time()
         # initialize the collector for the various re-weighting
         cross, ratio, ratio_square,error = {},{},{}, {}
@@ -716,6 +767,7 @@ class ReweightInterface(extended_cmd.Cmd):
 
     def do_gpucpp_launch(self):
         """Calling the compiled teawREX reweighting executable"""
+        import csv
         if self.rwgt_dir:
             path_me =self.rwgt_dir
         else:
@@ -726,32 +778,33 @@ class ReweightInterface(extended_cmd.Cmd):
         else:
             rw_dir = pjoin(path_me, 'rw_me')
         
-        input_file = self.lhe_input.path
-        output_file = input_file + 'rw'
         run_path = pjoin(rw_dir, 'SubProcesses')
-        card_path = pjoin(path_me, 'Cards')
-        param_card = pjoin(card_path, 'param_card.dat')
-        
+        input_file = os.path.relpath(self.lhe_input.path, run_path)
+        output_file = input_file + 'rw'
+        output_path = self.lhe_input.path + 'rw'
+        param_card = pjoin(rw_dir, 'Cards', 'param_card.dat')
+    
         #ZW: Exceptions, making sure all the necessary files for teawREX are accessible
         if( misc.is_executable(pjoin(run_path,'rwgt_driver_gpu.exe')) ):
-            driver = pjoin(run_path,'rwgt_driver_gpu.exe')
+            driver = pjoin(run_path, 'rwgt_driver_gpu.exe')
         elif(misc.is_executable(pjoin(run_path,'rwgt_driver_cpp.exe')) ):
             driver = pjoin(run_path,'rwgt_driver_cpp.exe')
         else:
             raise Exception('No teawREX driver found for parallel reweighting')
         if not os.path.exists(param_card):
             try:
-                files.cp(os.path.join(card_path, 'param_card_default.dat'), param_card)
+                files.cp(os.path.join(path_me, 'Cards', 'param_card_default.dat'), param_card)
             except:
-                raise Exception("No param_card.dat file found in %s" % card_path)
-        rwgt_card = os.path.join(card_path, 'reweight_card.dat')
+                raise Exception("No param_card.dat file found in %s" % pjoin(path_me, 'Cards'))
+        param_path = os.path.relpath(param_card, run_path)    
+        
+        rwgt_card = os.path.join(path_me, 'Cards', 'reweight_card.dat')
         if not os.path.exists(rwgt_card):
             try:
-                files.cp(os.path.join(card_path, 'reweight_card_default.dat'), rwgt_card)
+                files.cp(os.path.join(path_me, 'Cards', 'reweight_card_default.dat'), rwgt_card)
             except:
-                raise Exception("No reweight_card.dat file found in %s" % card_path)
-        
-        
+                raise Exception("No reweight_card.dat file found in %s" % pjoin(path_me, 'Cards'))
+        rwgt_path = os.path.relpath(rwgt_card, run_path)
         target = ''
         if not self.mother:
             name, ext = self.lhe_input.name.rsplit('.',1)
@@ -759,12 +812,17 @@ class ReweightInterface(extended_cmd.Cmd):
         elif self.output_type != "default" :
             target = pjoin(self.mother.me_dir, 'Events', self.mother.run_name, 'events.lhe')
         else:
-            target = self.lhe_input.name
+            target = self.lhe_input.path
         
         #ZW: rwgt_driver is written and compiled properly, now just to figure out how to run it through MG
         subprocess.call([driver, '-lhe=%s' % input_file, '-slha=%s' % param_card, '-rwgt=%s' % rwgt_card, '-out=%s' % output_file], cwd=run_path)
         
-        files.mv(output_file, target)
+        files.mv(output_path, target)
+        csv_file = pjoin(run_path, 'rwgt_results.csv')
+        with open(csv_file, newline='') as results:
+            iters = csv.reader(results)
+            for row in iters:
+                self.all_cross_section[(row[0],'')] = (float(row[1]), float(row[2]))
         
         return
         
