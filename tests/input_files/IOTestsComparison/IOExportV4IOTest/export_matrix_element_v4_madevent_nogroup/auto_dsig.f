@@ -39,6 +39,7 @@ C
 C     LOCAL VARIABLES 
 C     
       INTEGER I,ITYPE,LP,IPROC
+      DOUBLE PRECISION QSCALE
       DOUBLE PRECISION U1
       DOUBLE PRECISION UX2
       DOUBLE PRECISION XPQ(-7:7),PD(0:MAXPROC)
@@ -77,16 +78,14 @@ C     MINCFIG has this config number
 C     Keep track of whether cuts already calculated for this event
       LOGICAL CUTSDONE,CUTSPASSED
       COMMON/TO_CUTSDONE/CUTSDONE,CUTSPASSED
-
-      INCLUDE 'coupl.inc'
+      INTEGER IB(2)
+      INCLUDE '../../Source/vector.inc'  ! defines VECSIZE_MEMMAX
       INCLUDE 'run.inc'
       INCLUDE '../../Source/PDF/pdf.inc'
 C     Common blocks
-      INCLUDE 'vector.inc'
-C     jamp2 information
-      DOUBLE PRECISION JAMP2(0:MAXFLOW, NB_PAGE)
-      COMMON/TO_JAMPS/       JAMP2
-
+      DOUBLE PRECISION RHEL, RCOL
+      INTEGER SELECTED_HEL(VECSIZE_MEMMAX)
+      INTEGER SELECTED_COL(VECSIZE_MEMMAX)
 C     
 C     local
 C     
@@ -100,6 +99,8 @@ C
 C     ----------
 C     BEGIN CODE
 C     ----------
+      SELECTED_HEL(:) = 0
+      SELECTED_COL(:) = 0
       DSIG=0D0
       CUTSDONE=.FALSE.
       CUTSPASSED=.FALSE.
@@ -124,71 +125,77 @@ C       Set up process information from file symfact
 C     Continue only if IMODE is 0, 4 or 5
       IF(IMODE.NE.0.AND.IMODE.NE.4.AND.IMODE.NE.5) RETURN
 
-      IF (PASSCUTS(PP)) THEN
-        IF (ABS(LPP(1)) .GE. 1) THEN
-            !LP=SIGN(1,LPP(1))
-          U1=PDG2PDF(LPP(1),2, 1,XBK(1),DSQRT(Q2FACT(1)))
-        ENDIF
-        IF (ABS(LPP(2)) .GE. 1) THEN
-            !LP=SIGN(1,LPP(2))
-          UX2=PDG2PDF(LPP(2),-2, 2,XBK(2),DSQRT(Q2FACT(2)))
-        ENDIF
-        PD(0) = 0D0
-        IPROC = 0
-        IPROC=IPROC+1  ! u u~ > g g
-        PD(IPROC)=U1*UX2
-        PD(0)=PD(0)+DABS(PD(IPROC))
-        IF (IMODE.EQ.4)THEN
-          DSIG = PD(0)
-          RETURN
-        ENDIF
-        IF(FRAME_ID.NE.6)THEN
-          CALL BOOST_TO_FRAME(PP, FRAME_ID, P1)
-        ELSE
-          P1 = PP
-        ENDIF
 
-        CHANNEL = MAPCONFIG(ICONFIG)
-        CALL SMATRIX(P1,0,CHANNEL,DSIGUU,JAMP2(0,1),1)
-
-        IF (IMODE.EQ.5) THEN
-          IF (DSIGUU.LT.1D199) THEN
-            DSIG = DSIGUU*CONV
-          ELSE
-            DSIG = 0.0D0
-          ENDIF
-          RETURN
-        ENDIF
-C       Select a flavor combination (need to do here for right sign)
-        CALL RANMAR(R)
-        IPSEL=0
-        DO WHILE (R.GE.0D0 .AND. IPSEL.LT.IPROC)
-          IPSEL=IPSEL+1
-          R=R-DABS(PD(IPSEL))/PD(0)
-        ENDDO
-
-        DSIGUU=DSIGUU*REWGT(PP)
-
-C       Apply the bias weight specified in the run card (default is
-C        1.0)
-        DSIGUU=DSIGUU*CUSTOM_BIAS(PP,DSIGUU,1,1)
-
-        DSIGUU=DSIGUU*NFACT
-
-        IF (DSIGUU.LT.1D199) THEN
-C         Set sign of dsig based on sign of PDF and matrix element
-          DSIG=DSIGN(CONV*PD(0)*DSIGUU,DSIGUU*PD(IPSEL))
-        ELSE
-          WRITE(*,*) 'Error in matrix element'
-          DSIGUU=0D0
-          DSIG=0D0
-        ENDIF
-C       Generate events only if IMODE is 0.
-        IF(IMODE.EQ.0.AND.DABS(DSIG).GT.0D0)THEN
-C         Call UNWGT to unweight and store events
-          CALL UNWGT(PP,DSIG*WGT,1,1)
-        ENDIF
+C     for no grouping update the scale here (done in main autodsig for
+C      grouping  
+      CALL UPDATE_SCALE_COUPLING(PP, WGT)
+      IF (ABS(LPP(1)) .GE. 1) THEN
+C       LP=SIGN(1,LPP(1))
+        U1=PDG2PDF(LPP(1),2, 1,XBK(1),DSQRT(Q2FACT(1)))
       ENDIF
+      IF (ABS(LPP(2)) .GE. 1) THEN
+C       LP=SIGN(1,LPP(2))
+        UX2=PDG2PDF(LPP(2),-2, 2,XBK(2),DSQRT(Q2FACT(2)))
+      ENDIF
+      PD(0) = 0D0
+      IPROC = 0
+      IPROC=IPROC+1  ! u u~ > g g
+      PD(IPROC)=U1*UX2
+      PD(0)=PD(0)+DABS(PD(IPROC))
+      IF (IMODE.EQ.4)THEN
+        DSIG = PD(0)
+        RETURN
+      ENDIF
+      IF(FRAME_ID.NE.6)THEN
+        CALL BOOST_TO_FRAME(PP, FRAME_ID, P1)
+      ELSE
+        P1 = PP
+      ENDIF
+
+      CHANNEL = MAPCONFIG(ICONFIG)
+      CALL RANMAR(RHEL)
+      CALL RANMAR(RCOL)
+      CALL SMATRIX(P1,RHEL, RCOL,CHANNEL,1, DSIGUU, SELECTED_HEL(1),
+     $  SELECTED_COL(1))
+
+
+      IF (IMODE.EQ.5) THEN
+        IF (DSIGUU.LT.1D199) THEN
+          DSIG = DSIGUU*CONV
+        ELSE
+          DSIG = 0.0D0
+        ENDIF
+        RETURN
+      ENDIF
+C     Select a flavor combination (need to do here for right sign)
+      CALL RANMAR(R)
+      IPSEL=0
+      DO WHILE (R.GE.0D0 .AND. IPSEL.LT.IPROC)
+        IPSEL=IPSEL+1
+        R=R-DABS(PD(IPSEL))/PD(0)
+      ENDDO
+
+      DSIGUU=DSIGUU*REWGT(PP,1)
+
+C     Apply the bias weight specified in the run card (default is 1.0)
+      DSIGUU=DSIGUU*CUSTOM_BIAS(PP,DSIGUU,1,1)
+
+      DSIGUU=DSIGUU*NFACT
+
+      IF (DSIGUU.LT.1D199) THEN
+C       Set sign of dsig based on sign of PDF and matrix element
+        DSIG=DSIGN(CONV*PD(0)*DSIGUU,DSIGUU*PD(IPSEL))
+      ELSE
+        WRITE(*,*) 'Error in matrix element'
+        DSIGUU=0D0
+        DSIG=0D0
+      ENDIF
+C     Generate events only if IMODE is 0.
+      IF(IMODE.EQ.0.AND.DABS(DSIG).GT.0D0)THEN
+C       Call UNWGT to unweight and store events
+        CALL UNWGT(PP,DSIG*WGT,1,SELECTED_HEL(1), SELECTED_COL(1), 1)
+      ENDIF
+
       END
 C     
 C     Functionality to handling grid
@@ -245,7 +252,8 @@ C
 
 
       DOUBLE PRECISION FUNCTION DSIG_VEC(ALL_PP, ALL_XBK, ALL_Q2FACT,
-     $  ALL_CM_RAP, ALL_WGT,IMODE, ALL_OUT)
+     $  ALL_CM_RAP, ALL_WGT, IMODE, ALL_OUT, SYMCONF, CONFSUB,
+     $  ICONF_VEC, IMIRROR_VEC, VECSIZE_USED)
 C     ****************************************************
 C     
 C     Generated by MadGraph5_aMC@NLO v. %(version)s, %(date)s
@@ -269,7 +277,7 @@ C     ****************************************************
 C     
 C     CONSTANTS
 C     
-      INCLUDE '../../Source/vector.inc'
+      INCLUDE '../../Source/vector.inc'  ! defines VECSIZE_MEMMAX
       INCLUDE 'genps.inc'
       INCLUDE 'nexternal.inc'
       INCLUDE 'maxconfigs.inc'
@@ -281,13 +289,18 @@ C
 C     
 C     ARGUMENTS 
 C     
-      DOUBLE PRECISION ALL_PP(0:3,NEXTERNAL,NB_PAGE)
-      DOUBLE PRECISION ALL_WGT(NB_PAGE)
-      DOUBLE PRECISION ALL_XBK(2,NB_PAGE)
-      DOUBLE PRECISION ALL_Q2FACT(2,NB_PAGE)
-      DOUBLE PRECISION ALL_CM_RAP(NB_PAGE)
+      DOUBLE PRECISION ALL_PP(0:3,NEXTERNAL,VECSIZE_MEMMAX)
+      DOUBLE PRECISION ALL_WGT(VECSIZE_MEMMAX)
+      DOUBLE PRECISION ALL_XBK(2,VECSIZE_MEMMAX)
+      DOUBLE PRECISION ALL_Q2FACT(2,VECSIZE_MEMMAX)
+      DOUBLE PRECISION ALL_CM_RAP(VECSIZE_MEMMAX)
       INTEGER IMODE
-      DOUBLE PRECISION ALL_OUT(NB_PAGE)
+      DOUBLE PRECISION ALL_OUT(VECSIZE_MEMMAX)
+      INTEGER IMIRROR_VEC(*)
+      INTEGER ICONF_VEC(*)
+      INTEGER VECSIZE_USED
+      INTEGER SYMCONF(0:LMAXCONFIGS)
+      INTEGER CONFSUB(MAXSPROC,LMAXCONFIGS)
 C     ----------
 C     BEGIN CODE
 C     ----------
@@ -295,10 +308,11 @@ C
 C     LOCAL VARIABLES 
 C     
       INTEGER I,ITYPE,LP,IPROC
-      DOUBLE PRECISION U1
-      DOUBLE PRECISION UX2
+      DOUBLE PRECISION QSCALE
+      DOUBLE PRECISION U1(VECSIZE_MEMMAX)
+      DOUBLE PRECISION UX2(VECSIZE_MEMMAX)
       DOUBLE PRECISION XPQ(-7:7),PD(0:MAXPROC)
-      DOUBLE PRECISION ALL_PD(0:MAXPROC, NB_PAGE)
+      DOUBLE PRECISION ALL_PD(0:MAXPROC, VECSIZE_MEMMAX)
       DOUBLE PRECISION DSIGUU,R,RCONF
       INTEGER LUN,ICONF,IFACT,NFACT
       DATA NFACT/1/
@@ -306,7 +320,7 @@ C
       DOUBLE PRECISION RHEL  ! random number
       INTEGER CHANNEL
 C     
-C     STUFF FOR DRESSED EE COLLISIONS --even if not supported for now--
+C     STUFF FOR DRESSED EE COLLISIONS
 C     
       INCLUDE '../../Source/PDF/eepdf.inc'
       DOUBLE PRECISION EE_COMP_PROD
@@ -332,36 +346,38 @@ C     MINCFIG has this config number
 C     Keep track of whether cuts already calculated for this event
       LOGICAL CUTSDONE,CUTSPASSED
       COMMON/TO_CUTSDONE/CUTSDONE,CUTSPASSED
-C     jamp2 information      
-      DOUBLE PRECISION JAMP2(0:MAXFLOW, NB_PAGE)
-      COMMON/TO_JAMPS/       JAMP2
-
-      INCLUDE 'coupl.inc'
+      INTEGER IB(2)
       INCLUDE 'run.inc'
 
-      DOUBLE PRECISION P_MULTI(0:3, NEXTERNAL, NB_PAGE)
-      DOUBLE PRECISION HEL_RAND(NB_PAGE)
-      INTEGER SELECTED_HEL(NB_PAGE)
+      DOUBLE PRECISION P_MULTI(0:3, NEXTERNAL, VECSIZE_MEMMAX)
+      DOUBLE PRECISION HEL_RAND(VECSIZE_MEMMAX)
+      DOUBLE PRECISION COL_RAND(VECSIZE_MEMMAX)
+      INTEGER SELECTED_HEL(VECSIZE_MEMMAX)
+      INTEGER SELECTED_COL(VECSIZE_MEMMAX)
+      DOUBLE PRECISION ALL_RWGT(VECSIZE_MEMMAX)
 
 C     Common blocks
-      CHARACTER*7         PDLABEL,EPA_LABEL
-      INTEGER       LHAID
-      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL
+      INCLUDE '../../Source/PDF/pdf.inc'
+C     CHARACTER*7         PDLABEL,EPA_LABEL
+C     INTEGER       LHAID
+C     COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL     
 
 C     
 C     local
 C     
       DOUBLE PRECISION P1(0:3, NEXTERNAL)
-      INTEGER IVEC
-
+      INTEGER IVEC, CURR_WARP, IWARP, NB_WARP_USED
+      INTEGER CHANNELS(VECSIZE_MEMMAX)
 C     
 C     DATA
 C     
-      DATA U1/1*1D0/
-      DATA UX2/1*1D0/
+      DATA U1/VECSIZE_MEMMAX*1D0/
+      DATA UX2/VECSIZE_MEMMAX*1D0/
 C     ----------
 C     BEGIN CODE
 C     ----------
+      SELECTED_HEL(:) = 0
+      SELECTED_COL(:) = 0
       CUTSDONE=.FALSE.
       CUTSPASSED=.FALSE.
       IF(IMODE.EQ.1)THEN
@@ -372,32 +388,78 @@ C     ----------
 C     Continue only if IMODE is 0, 4 or 5
       IF(IMODE.NE.0.AND.IMODE.NE.4.AND.IMODE.NE.5) RETURN
 
-      IF (PASSCUTS(PP)) THEN
-        IF (ABS(LPP(1)) .GE. 1) THEN
-            !LP=SIGN(1,LPP(1))
-          U1=PDG2PDF(LPP(1),2, 1,XBK(1),DSQRT(Q2FACT(1)))
+
+      NB_WARP_USED = VECSIZE_USED / WARP_SIZE
+      IF( NB_WARP_USED * WARP_SIZE .NE. VECSIZE_USED ) THEN
+        WRITE(*,*) 'ERROR: NB_WARP_USED * WARP_SIZE .NE. VECSIZE_USED',
+     &    NB_WARP_USED, WARP_SIZE, VECSIZE_USED
+        STOP
+      ENDIF
+
+      DO CURR_WARP=1, NB_WARP_USED
+        IF(IMIRROR_VEC(CURR_WARP).EQ.1)THEN
+          IB(1) = 1
+          IB(2) = 2
+        ELSE
+          IB(1) = 2
+          IB(2) = 1
         ENDIF
-        IF (ABS(LPP(2)) .GE. 1) THEN
-            !LP=SIGN(1,LPP(2))
-          UX2=PDG2PDF(LPP(2),-2, 2,XBK(2),DSQRT(Q2FACT(2)))
-        ENDIF
-        PD(0) = 0D0
-        IPROC = 0
-        IPROC=IPROC+1  ! u u~ > g g
-        PD(IPROC)=U1*UX2
-        PD(0)=PD(0)+DABS(PD(IPROC))
+        DO IWARP=1, WARP_SIZE
+          IVEC = (CURR_WARP-1)*WARP_SIZE+IWARP
+          IF (ABS(LPP(1)) .GE. 1) THEN
+C           LP=SIGN(1,LPP(1))
+            U1(IVEC)=PDG2PDF(LPP(1),2, 1,ALL_XBK(1,IVEC)
+     $       ,DSQRT(ALL_Q2FACT(1,IVEC)))
+          ENDIF
+          IF (ABS(LPP(2)) .GE. 1) THEN
+C           LP=SIGN(1,LPP(2))
+            UX2(IVEC)=PDG2PDF(LPP(2),-2, 2,ALL_XBK(2,IVEC)
+     $       ,DSQRT(ALL_Q2FACT(2,IVEC)))
+          ENDIF
+        ENDDO  ! IWARP LOOP
+      ENDDO  ! CURRWARP LOOP
+      ALL_PD(0,:) = 0D0
+      IPROC = 0
+      IPROC=IPROC+1  ! u u~ > g g
+      DO IVEC=1, VECSIZE_USED
+        ALL_PD(IPROC,IVEC)=U1(IVEC)*UX2(IVEC)
+        ALL_PD(0,IVEC)=ALL_PD(0,IVEC)+DABS(ALL_PD(IPROC,IVEC))
+
+      ENDDO
 
 
-        IF (IMODE.EQ.4)THEN
-          ALL_OUT(:) = ALL_PD(0,:)
-          RETURN
-        ENDIF
+      IF (IMODE.EQ.4)THEN
+        ALL_OUT(:) = ALL_PD(0,:)
+        RETURN
+      ENDIF
 
-        DO IVEC=1,NB_PAGE
-C         Do not need those three here do I?	 
+      DO CURR_WARP=1, NB_WARP_USED
+        IF(IMIRROR_VEC(CURR_WARP).EQ.1)THEN
+          IB(1) = 1
+          IB(2) = 2
+        ELSE
+          IB(1) = 2
+          IB(2) = 1
+        ENDIF
+        DO IWARP=1, WARP_SIZE
+          IVEC = (CURR_WARP-1)*WARP_SIZE+IWARP
+C         Do not need those three here. do I?	 
           XBK(:) = ALL_XBK(:,IVEC)
 C         CM_RAP = ALL_CM_RAP(IVEC)
           Q2FACT(:) = ALL_Q2FACT(:, IVEC)
+
+
+C         Select a flavor combination (need to do here for right sign)
+          CALL RANMAR(R)
+          IPSEL=0
+          DO WHILE (R.GE.0D0 .AND. IPSEL.LT.IPROC)
+            IPSEL=IPSEL+1
+            R=R-DABS(ALL_PD(IPSEL,IVEC))/ALL_PD(0,IVEC)
+          ENDDO
+          CHANNEL  = MAPCONFIG(ICONFIG)
+
+
+          ALL_RWGT(IVEC) = REWGT(ALL_PP(0,1,IVEC), IVEC)
 
           IF(FRAME_ID.NE.6)THEN
             CALL BOOST_TO_FRAME(ALL_PP(0,1,IVEC), FRAME_ID, P_MULTI(0
@@ -406,126 +468,61 @@ C         CM_RAP = ALL_CM_RAP(IVEC)
             P_MULTI(:,:,IVEC) = ALL_PP(:,:,IVEC)
           ENDIF
           CALL RANMAR(HEL_RAND(IVEC))
-C         CALL SMATRIX(P1, RHEL, channel, ALL_OUT(IVEC), JAMP2(0,
-C          IVEC), IVEC)
-        ENDDO
-        CHANNEL = MAPCONFIG(ICONFIG)
-
-C       do IVEC=1, NB_PAGE
-C       CALL SMATRIX(p_multi(0,1,IVEC), hel_rand(ivec), channel,
-C        ALL_OUT(IVEC), JAMP2(0, IVEC), IVEC)
-C       enddo 
-        CALL SMATRIX_MULTI(P_MULTI, HEL_RAND,  CHANNEL, ALL_OUT ,
-     $    SELECTED_HEL, JAMP2)
+          CALL RANMAR(COL_RAND(IVEC))
+        ENDDO  ! end loop on IWARP/IVEC	 
+      ENDDO  ! end loop on the CURR_WARP
+      CALL SMATRIX_MULTI(P_MULTI, HEL_RAND, COL_RAND, CHANNELS,
+     $  ALL_OUT , SELECTED_HEL, SELECTED_COL, VECSIZE_USED)
 
 
-        DO IVEC=1,NB_PAGE
-          DSIGUU = ALL_OUT(IVEC)
-          IF (IMODE.EQ.5) THEN
-            IF (DSIGUU.LT.1D199) THEN
-              ALL_OUT(IVEC) = DSIGUU*CONV
-            ELSE
-              ALL_OUT(IVEC) = 0.0D0
-            ENDIF
-            RETURN
-          ENDIF
-C         Select a flavor combination (need to do here for right sign)
-          CALL RANMAR(R)
-          IPSEL=0
-          DO WHILE (R.GE.0D0 .AND. IPSEL.LT.IPROC)
-            IPSEL=IPSEL+1
-            R=R-DABS(ALL_PD(IPSEL,IVEC))/ALL_PD(0,IVEC)
-          ENDDO
-
-          XBK(:) = ALL_XBK(:,IVEC)
-C         CM_RAP = ALL_CM_RAP(IVEC)
-          Q2FACT(:) = ALL_Q2FACT(:, IVEC)
-
-          IF(FRAME_ID.NE.6)THEN
-            CALL BOOST_TO_FRAME(ALL_PP(0,1,IVEC), FRAME_ID, P1)
-          ELSE
-            P1 = ALL_PP(:,:,IVEC)
-          ENDIF
-          CALL RESTORE_CL_VAL_TO(IVEC)
-          DSIGUU=DSIGUU*REWGT(P1)
-
-C         Apply the bias weight specified in the run card (default is
-C          1.0)
-          DSIGUU=DSIGUU*CUSTOM_BIAS(P1,DSIGUU,1, IVEC)
-
-          DSIGUU=DSIGUU*NFACT
-
+      DO IVEC=1,VECSIZE_USED
+        DSIGUU = ALL_OUT(IVEC)
+        IF (IMODE.EQ.5) THEN
           IF (DSIGUU.LT.1D199) THEN
-C           Set sign of dsig based on sign of PDF and matrix element
-            ALL_OUT(IVEC)=DSIGN(CONV*ALL_PD(0,IVEC)*DSIGUU,DSIGUU
-     $       *ALL_PD(IPSEL,IVEC))
+            ALL_OUT(IVEC) = DSIGUU*CONV
           ELSE
-            WRITE(*,*) 'Error in matrix element'
-            DSIGUU=0D0
-            ALL_OUT(IVEC)=0D0
+            ALL_OUT(IVEC) = 0.0D0
           ENDIF
-C         Generate events only if IMODE is 0.
-          IF(IMODE.EQ.0.AND.DABS(ALL_OUT(IVEC)).GT.0D0)THEN
-C           Call UNWGT to unweight and store events
-            CALL UNWGT(ALL_PP(0,1,IVEC), ALL_OUT(IVEC)*ALL_WGT(IVEC),1
-     $       , IVEC)
-          ENDIF
-        ENDDO
-      ENDIF
-      END
-C     
-C     Functionality to handling grid
-C     
+          RETURN
+        ENDIF
 
-      SUBROUTINE WRITE_GOOD_HEL(STREAM_ID)
-      IMPLICIT NONE
-      INTEGER STREAM_ID
-      INTEGER                 NCOMB
-      PARAMETER (             NCOMB=16)
-      LOGICAL GOODHEL(NCOMB)
-      INTEGER NTRY
-      COMMON/BLOCK_GOODHEL/NTRY,GOODHEL
-      WRITE(STREAM_ID,*) GOODHEL
-      RETURN
-      END
+        XBK(:) = ALL_XBK(:,IVEC)
+C       CM_RAP = ALL_CM_RAP(IVEC)
+        Q2FACT(:) = ALL_Q2FACT(:, IVEC)
 
+        IF(FRAME_ID.NE.6)THEN
+          CALL BOOST_TO_FRAME(ALL_PP(0,1,IVEC), FRAME_ID, P1)
+        ELSE
+          P1 = ALL_PP(:,:,IVEC)
+        ENDIF
+C       call restore_cl_val_to(ivec)
+C       DSIGUU=DSIGUU*REWGT(P1,ivec)
+        DSIGUU=DSIGUU*ALL_RWGT(IVEC)
 
-      SUBROUTINE READ_GOOD_HEL(STREAM_ID)
-      IMPLICIT NONE
-      INCLUDE 'genps.inc'
-      INTEGER STREAM_ID
-      INTEGER                 NCOMB
-      PARAMETER (             NCOMB=16)
-      LOGICAL GOODHEL(NCOMB)
-      INTEGER NTRY
-      COMMON/BLOCK_GOODHEL/NTRY,GOODHEL
-      READ(STREAM_ID,*) GOODHEL
-      NTRY = MAXTRIES + 1
-      RETURN
-      END
+C       Apply the bias weight specified in the run card (default is
+C        1.0)
+        DSIGUU=DSIGUU*CUSTOM_BIAS(P1,DSIGUU,1, IVEC)
 
-      SUBROUTINE INIT_GOOD_HEL()
-      IMPLICIT NONE
-      INTEGER                 NCOMB
-      PARAMETER (             NCOMB=16)
-      LOGICAL GOODHEL(NCOMB)
-      INTEGER NTRY
-      INTEGER I
+        DSIGUU=DSIGUU*NFACT
 
-      DO I=1,NCOMB
-        GOODHEL(I) = .FALSE.
+        IF (DSIGUU.LT.1D199) THEN
+C         Set sign of dsig based on sign of PDF and matrix element
+          ALL_OUT(IVEC)=DSIGN(CONV*ALL_PD(0,IVEC)*DSIGUU,DSIGUU
+     $     *ALL_PD(IPSEL,IVEC))
+        ELSE
+          WRITE(*,*) 'Error in matrix element'
+          DSIGUU=0D0
+          ALL_OUT(IVEC)=0D0
+        ENDIF
+C       Generate events only if IMODE is 0.
+        IF(IMODE.EQ.0.AND.DABS(ALL_OUT(IVEC)).GT.0D0)THEN
+C         Call UNWGT to unweight and store events
+          CALL UNWGT(ALL_PP(0,1,IVEC), ALL_OUT(IVEC)*ALL_WGT(IVEC),1,
+     $      SELECTED_HEL(IVEC), SELECTED_COL(IVEC), IVEC)
+        ENDIF
       ENDDO
-      NTRY = 0
+
       END
-
-      INTEGER FUNCTION GET_MAXSPROC()
-      IMPLICIT NONE
-      GET_MAXSPROC = 1
-      RETURN
-      END
-
-
-
 
 
 
@@ -536,38 +533,46 @@ C
       END
 
 
-      SUBROUTINE SMATRIX_MULTI(P_MULTI, HEL_RAND,  CHANNEL, OUT ,
-     $  SELECTED_HEL, JAMP2_MULTI)
-
+      SUBROUTINE SMATRIX_MULTI(P_MULTI, HEL_RAND, COL_RAND, CHANNELS,
+     $  OUT, SELECTED_HEL, SELECTED_COL, VECSIZE_USED)
       USE OMP_LIB
+      IMPLICIT NONE
 
       INCLUDE 'nexternal.inc'
-      INCLUDE '../../Source/vector.inc'
+      INCLUDE '../../Source/vector.inc'  ! defines VECSIZE_MEMMAX
       INCLUDE 'maxamps.inc'
-      DOUBLE PRECISION P_MULTI(0:3, NEXTERNAL, NB_PAGE)
-      DOUBLE PRECISION HEL_RAND(NB_PAGE)
-      INTEGER CHANNEL
-      DOUBLE PRECISION OUT(NB_PAGE)
-      INTEGER SELECTED_HEL(NB_PAGE)
-      DOUBLE PRECISION JAMP2_MULTI(0:MAXFLOW, NB_PAGE)
+      INTEGER                 NCOMB
+      PARAMETER (             NCOMB=16)
+      DOUBLE PRECISION P_MULTI(0:3, NEXTERNAL, VECSIZE_MEMMAX)
+      DOUBLE PRECISION HEL_RAND(VECSIZE_MEMMAX)
+      DOUBLE PRECISION COL_RAND(VECSIZE_MEMMAX)
+      INTEGER CHANNELS(VECSIZE_MEMMAX)
+      DOUBLE PRECISION OUT(VECSIZE_MEMMAX)
+      INTEGER SELECTED_HEL(VECSIZE_MEMMAX)
+      INTEGER SELECTED_COL(VECSIZE_MEMMAX)
+      INTEGER VECSIZE_USED
 
       INTEGER IVEC
 
 
+
+
 !$OMP PARALLEL
 !$OMP DO
-      DO IVEC=1, NB_PAGE
+      DO IVEC=1, VECSIZE_USED
         CALL SMATRIX(P_MULTI(0,1,IVEC),
      &	                         hel_rand(IVEC),
-     &				 channel,
+     &                           col_rand(IVEC),
+     &				 channels(IVEC),
+     &                           IVEC,
      &				 out(IVEC),
-C       &				 selected_hel(IVEC),
-     &				 jamp2_multi(0,IVEC),
-     &				 IVEC
+     &				 selected_hel(IVEC),
+     &				 selected_col(IVEC)
      &				 )
       ENDDO
 !$OMP END DO
 !$OMP END PARALLEL
+
       RETURN
       END
 
@@ -604,5 +609,103 @@ C      particle
       GET_NHEL = NHEL(IPART, IABS(HEL))
       RETURN
       END
+
+
+
+
+      SUBROUTINE PREPARE_GROUPING_CHOICE(PP, WGT, INIT)
+      DOUBLE PRECISION PP(*)
+      DOUBLE PRECISION WGT
+      LOGICAL INIT
+      RETURN
+      END
+
+      SUBROUTINE SELECT_GROUPING(IMIRROR, IPROC, ICONF, WGT, IWARP)
+      INTEGER IMIRROR
+      INTEGER IPROC
+      INTEGER ICONF
+      DOUBLE PRECISION WGT
+      INTEGER IWARP
+      RETURN
+      END
+
+
+      SUBROUTINE SELECT_COLOR(RCOL, JAMP2, ICONFIG, IPROC, ICOL)
+      IMPLICIT NONE
+      INCLUDE 'maxamps.inc'  ! for the definition of maxflow
+      INCLUDE 'coloramps.inc'  ! set the coloramps
+C     
+C     argument IN
+C     
+      DOUBLE PRECISION RCOL  ! random number
+      DOUBLE PRECISION JAMP2(0:MAXFLOW)
+      INTEGER ICONFIG  ! amplitude selected
+      INTEGER IPROC  ! matrix element selected
+C     
+C     argument OUT
+C     
+      INTEGER ICOL
+C     
+C     local
+C     
+      INTEGER NC  ! number of assigned color in jamp2
+      LOGICAL IS_LC
+      INTEGER MAXCOLOR
+      DOUBLE PRECISION TARGETAMP(0:MAXFLOW)
+      INTEGER I,J
+      DOUBLE PRECISION XTARGET
+
+      NC = INT(JAMP2(0))
+      IS_LC = .TRUE.
+      MAXCOLOR=0
+      TARGETAMP(0) = 0D0
+      IF(NC.EQ.0)THEN
+        ICOL = 0
+        RETURN
+      ENDIF
+      DO I=1,NC
+        IF(ICOLAMP(I,ICONFIG,IPROC))THEN
+          TARGETAMP(I) = TARGETAMP(I-1) + JAMP2(I)
+        ELSE
+          TARGETAMP(I) = TARGETAMP(I-1)
+        ENDIF
+      ENDDO
+
+C     ensure that at least one leading color is different of zero if
+C      not allow
+C     all subleading color.
+      IF (TARGETAMP(NC).EQ.0)THEN
+        IS_LC = .FALSE.
+        DO ICOL =1,NC
+          TARGETAMP(ICOL) = JAMP2(ICOL)+TARGETAMP(ICOL-1)
+        ENDDO
+      ENDIF
+
+      XTARGET=RCOL*TARGETAMP(NC)
+
+      ICOL = 1
+      DO WHILE (TARGETAMP(ICOL) .LT. XTARGET .AND. ICOL .LT. NC)
+        ICOL = ICOL + 1
+      ENDDO
+
+      RETURN
+      END
+
+      SUBROUTINE GET_HELICITIES(IPROC, IHEL, NHEL)
+      IMPLICIT NONE
+      INCLUDE 'nexternal.inc'
+      INTEGER IPROC
+      INTEGER IHEL
+      INTEGER NHEL(NEXTERNAL)
+      INTEGER I
+      INTEGER GET_NHEL
+
+      DO I=1,NEXTERNAL
+        NHEL(I) = GET_NHEL(IHEL,I)
+      ENDDO
+
+      RETURN
+      END
+
 
 

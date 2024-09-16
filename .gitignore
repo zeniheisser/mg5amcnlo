@@ -11,6 +11,8 @@ ptest*
 *.pkl
 p_ME_*
 *.log
+.DS_Store
+tests/status
 input/default_run_card_lo.dat
 input/default_run_card_nlo.dat
 input/mg5_configuration.txt
@@ -69,6 +71,6 @@ tests/input_files/*/*.pkl
 vendor/StdHEP/log.*
 tmp
 check_sa_born_splitOrders.f
-models/*/
 models/*.tgz
+tests/status
 nsqso_born.inc
