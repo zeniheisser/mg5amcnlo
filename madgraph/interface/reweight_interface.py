@@ -119,6 +119,10 @@ class ReweightInterface(extended_cmd.Cmd):
         self.exitted = False # Flag to know if do_quit was already called.
         self.keep_ordering = False
         self.use_eventid = False
+        self.launches = 0
+        self.compile_time = 0.0
+        self.run_time = 0.0
+        self.nb_events = 0
         if event_path:
             logger.info("Extracting the banner ...")
             self.do_import(event_path, allow_madspin=allow_madspin)
@@ -527,6 +531,8 @@ class ReweightInterface(extended_cmd.Cmd):
             rw_dir = pjoin(path_me, 'rw_me')
                 
         start = time.time()
+        if self.run_time == 0.0:
+            self.run_time = time.time()
         # initialize the collector for the various re-weighting
         cross, ratio, ratio_square,error = {},{},{}, {}
         for name in type_rwgt + ['orig']:
@@ -554,12 +560,12 @@ class ReweightInterface(extended_cmd.Cmd):
 
         self.lhe_input.seek(0)
         for event_nb,event in enumerate(self.lhe_input):
-            #control logger
-            if (event_nb % max(int(10**int(math.log10(float(event_nb)+1))),10)==0): 
-                    running_time = misc.format_timer(time.time()-start)
-                    logger.info('Event nb %s %s' % (event_nb, running_time))
-            if (event_nb==10001): logger.info('reducing number of print status. Next status update in 10000 events')
-            if (event_nb==100001): logger.info('reducing number of print status. Next status update in 100000 events')
+            # #control logger
+            # if (event_nb % max(int(10**int(math.log10(float(event_nb)+1))),10)==0): 
+            #         running_time = misc.format_timer(time.time()-start)
+            #         logger.info('Event nb %s %s' % (event_nb, running_time))
+            # if (event_nb==10001): logger.info('reducing number of print status. Next status update in 10000 events')
+            # if (event_nb==100001): logger.info('reducing number of print status. Next status update in 100000 events')
 
 
                 
@@ -607,7 +613,10 @@ class ReweightInterface(extended_cmd.Cmd):
                     cross[key] = value / (event_nb+1)
                 
         running_time = misc.format_timer(time.time()-start)
-        logger.info('All event done  (nb_event: %s) %s' % (event_nb+1, running_time))        
+        self.launches += 1
+        if(self.nb_events == 0):
+            self.nb_events = event_nb+1
+        #logger.info('All event done  (nb_event: %s) %s' % (event_nb+1, running_time))        
         
         
         if self.output_type == "default":
@@ -660,7 +669,7 @@ class ReweightInterface(extended_cmd.Cmd):
         
         if self.output_type == "default":
             files.mv(output.name, target)
-            logger.info('Event %s have now the additional weight' % self.lhe_input.name)
+            #logger.info('Event %s have now the additional weight' % self.lhe_input.name)
         elif self.output_type == "unweight":
             for key in output:
                 #output[key].write('</LesHouchesEvents>\n')
@@ -682,8 +691,8 @@ class ReweightInterface(extended_cmd.Cmd):
             for name in cross:
                 if name == 'orig':
                     continue
-                logger.info('new cross-section is %s: %g pb (indicative error: %g pb)' %\
-                        ('(%s)' %name if name else '',cross[name], error[name]))
+                #logger.info('new cross-section is %s: %g pb (indicative error: %g pb)' %\
+                #        ('(%s)' %name if name else '',cross[name], error[name]))
             
         self.terminate_fortran_executables(new_card_only=True)
         #store result
@@ -1400,7 +1409,9 @@ class ReweightInterface(extended_cmd.Cmd):
         if self.exitted:
             return
         self.exitted = True
-        
+        self.run_time = time.time() - self.run_time
+        with (open(os.path.join(self.me_dir, '..', 'rwgt_times.txt'), 'a')) as file:
+            file.write('[%s,%s,%s,%s]\n' %(self.launches, self.nb_events, self.compile_time, self.run_time) )
         if 'init' in self.banner:
             cross = 0 
             error = 0
@@ -1833,6 +1844,8 @@ class ReweightInterface(extended_cmd.Cmd):
         else:
             path_me = self.rwgt_dir
         
+        start = time.time()
+        
         rwgt_dir_possibility =   ['rw_me','rw_me_%s' % self.nb_library,'rw_mevirt','rw_mevirt_%s' % self.nb_library]
         for onedir in rwgt_dir_possibility:
             if not os.path.isdir(pjoin(path_me,onedir)):
@@ -1847,6 +1860,8 @@ class ReweightInterface(extended_cmd.Cmd):
             if not (self.second_model or self.second_process or self.dedicated_path):
                 os.environ['MENUM'] = '3'
                 misc.compile(['allmatrix3py.so'], cwd=pdir, nb_core=nb_core)
+        
+        self.compile_time = time.time()-start
 
     def load_module(self, metag=1):
         """load the various module and load the associate information"""
