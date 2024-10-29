@@ -121,7 +121,7 @@ auto_update = True
 p = subprocess.Popen("git branch --show-current", stdout=subprocess.PIPE, shell=True)
 MG_branch = p.stdout.read().decode().strip()
 if MG_branch not in  ['3.x', 'LTS']:
-    print("cannot create tarball with auto-update outside of the main branch, detected branch (%s)" % branch)
+    print("cannot create tarball with auto-update outside of the main branch, detected branch (%s)" % MG_branch)
     answer = input('Do you want to continue anyway? (y/n)')
     if answer != 'y':
         exit()
@@ -349,9 +349,11 @@ rm -rf download-temp;
 """ % filepath
 os.system(install_str)
 
-collier_link = "http://collier.hepforge.org/collier-latest.tar.gz" 
+sys.path.append(pjoin(root_path, '..'))
+from HEPToolsInstallers.HEPToolInstaller import _HepTools
+collier_link = _HepTools['collier']['tarball'][1] % _HepTools['collier']
+ninja_link = _HepTools['ninja']['tarball'][1] % _HepTools['ninja']
 misc.wget(collier_link, os.path.join(filepath, 'vendor', 'collier.tar.gz'))
-ninja_link = "https://bitbucket.org/peraro/ninja/downloads/ninja-latest.tar.gz"
 misc.wget(ninja_link, os.path.join(filepath, 'vendor', 'ninja.tar.gz'))
 
 # Add the tarball for SMWidth
@@ -382,7 +384,6 @@ except:
     logging.warning("Call to gpg to create signature file failed. " +\
                     "Please install and run\n" + \
                     "gpg --armor --sign --detach-sig " + filename)
-
 
 
 logging.info("Running tests on directory %s", filepath)
