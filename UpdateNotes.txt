@@ -4,6 +4,9 @@ ANNOUNCMENT:
    2.9.X version has a LONG TERM STABLE has now an end of life for bug fixing/support in december 2025.
    A new LTS (based on current 3.5.X) is starting now and will act as stable release for the coming years.
 
+2.9.22 ():
+    OM: Fix a (NLO) issue if the environment variable was setting FFLAGS
+
 2.9.21 (26/9/34):
     OM: Adding support for GCC14 (thanks to joequant)
     OM: Fixing a rare issue within aloha where some generated code was not compiling
