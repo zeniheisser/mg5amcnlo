@@ -2958,6 +2958,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'output_dependencies':'external',
                        'crash_on_error':False,
                        'auto_convert_model': False,
+                       'auto_update':7,
                        }
 
     options_madgraph= {'group_subprocesses': 'Auto',
@@ -2972,7 +2973,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                           'default_unset_couplings': 99, # 99 means infinity
                           'max_t_for_channel': 99, # means no restrictions
                           'zerowidth_tchannel': True,
-                          'auto_update':7,
                         }
 
     options_madevent = {'automatic_html_opening':True,
