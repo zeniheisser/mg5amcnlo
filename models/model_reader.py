@@ -246,7 +246,7 @@ class ModelReader(loop_base_objects.LoopModel):
         for particle in self.get('particles'):
             if particle.is_fermion() and particle.get('self_antipart') and \
                    particle.get('width').lower() != 'zero' and \
-                   eval(particle.get('mass')).real < 0:
+                   eval(particle.get('mass'), globals(), all_params).real < 0:
                 exec("locals()[\'%(width)s\'] = -abs(%(width)s)" % \
                      {'width': particle.get('width')}, globals(), all_params)
 
