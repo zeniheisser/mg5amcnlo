@@ -1949,6 +1949,11 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
             if j['P_dir'] in done:
                 continue
             done.append(j['P_dir'])
+            # Give a little status. Sometimes these jobs run very long, and having hours without any
+            # console output can be a bit frightening and make users think we are looping.
+            if len(done)%5==0:
+                logger.info(f"Working on job {len(done)} of {len(jobs)}")
+
             # set the working directory path.
             pwd = pjoin(os.getcwd(),j['P_dir']) if self.readonly else pjoin(self.me_dir, 'SubProcesses', j['P_dir'])
             exe = pjoin(pwd, 'ajob1')
