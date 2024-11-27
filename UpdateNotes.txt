@@ -197,6 +197,10 @@ ANNOUNCEMENT:
                         ** Long Term Stable Update **
 
 
+2.9.22 ():
+    OM: Fix a (NLO) issue if the environment variable was setting FFLAGS
+    OM: set auto_update X, now automatically set the configuration file (as it should).
+
 2.9.21 (26/9/24):
     OM: Adding support for GCC14 (thanks to joequant)
     OM: Fixing a rare issue within aloha where some generated code was not compiling
