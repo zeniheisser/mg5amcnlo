@@ -200,6 +200,9 @@ ANNOUNCEMENT:
 2.9.22 ():
     OM: Fix a (NLO) issue if the environment variable was setting FFLAGS
     OM: set auto_update X, now automatically set the configuration file (as it should).
+    OM: Fix a bug in helicity recycling with scan for rare case where a matrix element is first correct, then zero, then has a single helicity.
+        In that third case, the code was not recompiled correctly and was picking the wrong amplitude.
+        Thanks to Matteo Maltoni for finding such bug
 
 2.9.21 (26/9/24):
     OM: Adding support for GCC14 (thanks to joequant)
