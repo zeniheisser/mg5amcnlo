@@ -1135,8 +1135,8 @@ class CheckValidForCmd(cmd.CheckCmd):
             order = process.split('[')[1].split(']')[0]
             if '=' in order:
                 order = order.split('=')[1]
-            if order.strip().lower() != 'qcd':
-                raise self.InvalidCmd('Polarization restriction can not be used for generic NLO computations')
+#            if order.strip().lower() != 'qcd':
+#                raise self.InvalidCmd('Polarization restriction can not be used for generic NLO computations')
 
             def check(p):
                 if p.get('color') != 1:
@@ -3011,7 +3011,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'output_dependencies':'external',
                        'crash_on_error':False,
                        'auto_convert_model': True,
-                       'acknowledged_v3.1_syntax': False
+                       'acknowledged_v3.1_syntax': False,
+                       'auto_update':7,
                        }
 
     options_madgraph= {'group_subprocesses': 'Auto',
@@ -3028,7 +3029,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                           'max_t_for_channel': 99, # means no restrictions
                           'zerowidth_tchannel': True,
                           'nlo_mixed_expansion':True,
-                          'auto_update':7,
                         }
 
     options_madevent = {'automatic_html_opening':True,
