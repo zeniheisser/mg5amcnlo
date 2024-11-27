@@ -1125,10 +1125,10 @@ class CheckValidForCmd(cmd.CheckCmd):
             
         if '[' in process and '{' in process:
             valid = False
-            #if 'noborn' in process or 'sqrvirt' in process:
-            #    valid = True
-            #else:
-            #    raise self.InvalidCmd('Polarization restriction can not be used for NLO processes')
+            if 'noborn' in process or 'sqrvirt' in process:
+                valid = True
+            else:
+                raise self.InvalidCmd('Polarization restriction can not be used for NLO processes')
 
             # below are the check when [QCD] will be valid for computation            
             order = process.split('[')[1].split(']')[0]
