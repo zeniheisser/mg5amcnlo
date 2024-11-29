@@ -1923,7 +1923,8 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             for i, name in enumerate(split):
                 try:
                     __import__('.'.join(split[:i+1]))                    
-                    exec('%s=sys.modules[\'%s\']' % (split[i], '.'.join(split[:i+1])))
+                    tmp = {}
+                    exec('%s=sys.modules[\'%s\']' % (split[i], '.'.join(split[:i+1])), globals(),tmp)
                 except ImportError:
                     try:
                         var = eval(args[1])
@@ -1934,7 +1935,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                         outstr += 'EXTERNAL:\n'
                         outstr += misc.nice_representation(var, nb_space=4)                        
                 else:
-                    var = eval(args[1])
+                    var = eval(args[1], globals(), tmp)
                     outstr += 'EXTERNAL:\n'
                     outstr += misc.nice_representation(var, nb_space=4)                        
             
