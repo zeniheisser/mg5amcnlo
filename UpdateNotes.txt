@@ -203,6 +203,7 @@ ANNOUNCEMENT:
     OM: Fix a bug in helicity recycling with scan for rare case where a matrix element is first correct, then zero, then has a single helicity.
         In that third case, the code was not recompiled correctly and was picking the wrong amplitude.
         Thanks to Matteo Maltoni for finding such bug
+    OM: Starting support for python3.13, as for python3.12 functionallity like reweighting will not work with 2.9.x LTS branch.
 
 2.9.21 (26/9/24):
     OM: Adding support for GCC14 (thanks to joequant)
