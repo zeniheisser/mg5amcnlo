@@ -3318,7 +3318,6 @@ class RunCard(ConfigFile):
             for i,line in enumerate(lines[:]):
                 if search and re.search(include_pat, line):
                     name = re.findall(include_pat, line)[0]
-                    misc.sprint('DETECTED INCLUDE', name)
                     if 'vector.inc' in name:
                         search = False
                     if 'run.inc' in name:
@@ -3326,7 +3325,6 @@ class RunCard(ConfigFile):
                         search = False
                 sol.append(line)
                 if re.search(function_pat, line):
-                    misc.sprint("DETECTED FCT")
                     search = True
         return sol
 
