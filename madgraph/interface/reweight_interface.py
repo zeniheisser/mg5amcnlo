@@ -114,7 +114,7 @@ class ReweightInterface(extended_cmd.Cmd):
             self.mg5cmd.options.update(mother.options)
         self.seed = None
         self.output_type = "default"
-        self.helicity_reweighting = True
+        self.helicity_reweighting = False
         self.rwgt_mode = '' # can be LO, NLO, NLO_tree, '' is default 
         self.has_nlo = False
         self.rwgt_dir = None
@@ -122,6 +122,8 @@ class ReweightInterface(extended_cmd.Cmd):
         self.keep_ordering = False
         self.use_eventid = False
         self.inc_sudakov = False
+        self.run_time = 0.0
+        self.nb_events = 0
         if event_path:
             logger.info("Extracting the banner ...")
             self.do_import(event_path, allow_madspin=allow_madspin)
@@ -489,6 +491,8 @@ class ReweightInterface(extended_cmd.Cmd):
     @misc.mute_logger()
     def do_launch(self, line):
         """end of the configuration launched the code"""
+        if self.run_time == 0.0:
+            self.run_time = time.time()
         args = self.split_arg(line)
         opts = self.check_launch(args)
         mgcmd = self.mg5cmd
@@ -599,11 +603,11 @@ class ReweightInterface(extended_cmd.Cmd):
         count_errors = 0
         for event_nb,event in enumerate(self.lhe_input):
             #control logger
-            if (event_nb % max(int(10**int(math.log10(float(event_nb)+1))),10)==0): 
-                    running_time = misc.format_timer(time.time()-start)
-                    logger.info('Event nb %s %s' % (event_nb, running_time))
-            if (event_nb==10001): logger.info('reducing number of print status. Next status update in 10000 events')
-            if (event_nb==100001): logger.info('reducing number of print status. Next status update in 100000 events')
+            # if (event_nb % max(int(10**int(math.log10(float(event_nb)+1))),10)==0): 
+            #         running_time = misc.format_timer(time.time()-start)
+            #         logger.info('Event nb %s %s' % (event_nb, running_time))
+            # if (event_nb==10001): logger.info('reducing number of print status. Next status update in 10000 events')
+            # if (event_nb==100001): logger.info('reducing number of print status. Next status update in 100000 events')
 
             if self.inc_sudakov:
                 weight = self.calculate_weight(event, sud_mod)
@@ -656,7 +660,7 @@ class ReweightInterface(extended_cmd.Cmd):
                     cross[key] = value / (event_nb+1)
                 
         running_time = misc.format_timer(time.time()-start)
-        logger.info('All event done  (nb_event: %s) %s' % (event_nb+1, running_time))     
+        # logger.info('All event done  (nb_event: %s) %s' % (event_nb+1, running_time))     
         if self.inc_sudakov:
             logger.info('Number of events thrown away due to large Sudakov: %s' % str(count_errors))   
         
@@ -710,7 +714,7 @@ class ReweightInterface(extended_cmd.Cmd):
         
         if self.output_type == "default":
             files.mv(output.name, target)
-            logger.info('Event %s have now the additional weight' % self.lhe_input.name)
+            # logger.info('Event %s have now the additional weight' % self.lhe_input.name)
         elif self.output_type == "unweight":
             for key in output:
                 #output[key].write('</LesHouchesEvents>\n')
@@ -721,7 +725,7 @@ class ReweightInterface(extended_cmd.Cmd):
                     results = self.mother.results
                     results.add_detail('nb_event', nb_event)
                     results.current.parton.append('lhe')
-                logger.info('Event %s is now unweighted under the new theory: %s(%s)' % (lhe.name, target, nb_event))                
+                # logger.info('Event %s is now unweighted under the new theory: %s(%s)' % (lhe.name, target, nb_event))                
         else:
             if self.mother and  hasattr(self.mother, 'results'):
                 results = self.mother.results
@@ -1716,6 +1720,10 @@ class ReweightInterface(extended_cmd.Cmd):
 
         if self.rwgt_dir and self.multicore == False:
             self.save_to_pickle()
+        
+        self.run_time = time.time() - self.run_time
+        with open(pjoin(self.me_dir,'..','rwgt_time.txt'), 'a') as file:
+            file.write('%s,' % self.run_time)
         
         with misc.stdchannel_redirected(sys.stdout, os.devnull):
             for run_id in self.calculator:
