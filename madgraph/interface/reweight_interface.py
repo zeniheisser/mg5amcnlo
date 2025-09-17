@@ -1415,7 +1415,7 @@ class ReweightInterface(extended_cmd.Cmd):
             with open(os.path.join(self.me_dir,  'rwgt_times.txt'), 'w') as file:
                 file.write('iter, events, compile, run\n')
         with open(os.path.join(self.me_dir, 'rwgt_times.txt'), 'a') as file:
-            file.write('%s,%s,%s,%s\n' %(self.launches, self.nb_events, self.compile_time, self.run_time) )
+            file.write('%s,%s,%s\n' %(self.launches, self.nb_events, self.run_time) )
         if 'init' in self.banner:
             cross = 0 
             error = 0
