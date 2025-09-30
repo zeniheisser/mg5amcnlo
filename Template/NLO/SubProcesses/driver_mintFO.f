@@ -371,8 +371,8 @@ c timing statistics
 c PineAPPL
       logical pineappl
       common /for_pineappl/ pineappl
-      double precision       wgt_ME_born,wgt_ME_real
-      common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
+c      double precision       wgt_ME_born,wgt_ME_real
+c      common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
       integer     fold,ifold_counter
       common /cfl/fold,ifold_counter
       integer ini_fin_fks_map(0:2,0:fks_configs)
@@ -411,8 +411,8 @@ c PineAPPL
          born_wgt_mint(iamp)=0d0
       enddo
       virtual_over_born=0d0
-      wgt_me_born=0d0
-      wgt_me_real=0d0
+c      wgt_me_born=0d0
+c      wgt_me_real=0d0
       if (ickkw.eq.-1) H1_factor_virt=0d0
       if (ickkw.eq.3) call set_FxFx_scale(0,p)
       call update_vegas_x(xx,x)
@@ -473,8 +473,8 @@ c The n+1-body contributions (including counter terms)
          ! MZ this is a temporary fix for processes without
          ! soft singularities associated to the initial state
          ! DO NOT extend this fix to event generation
-         wgt_me_born=0d0
-         wgt_me_real=0d0
+c         wgt_me_born=0d0
+c         wgt_me_real=0d0
          jac=MC_int_wgt
          call update_fks_dir(iFKS)
          call generate_momenta(nndim,iconfig,jac,x,p)

@@ -621,7 +621,7 @@ c min(i_fks,j_fks) is the mother of the FKS pair
 
       
       subroutine compute_xmcsubt_complete(p,probne,gfactsf,gfactcl
-     $     ,flagmc,lzone,zhw,nofpartners,xmcxsec)
+     $     ,flagmc,lzone,zhw,nofpartners,xmcxsec,born_wgt)
       implicit none
       include 'nexternal.inc'
       include 'madfks_mcatnlo.inc'
@@ -632,6 +632,7 @@ c min(i_fks,j_fks) is the mother of the FKS pair
       logical lzone(nexternal),flagmc
       double precision bornbars(max_bcol,nsplitorders),
      $     bornbarstilde(max_bcol,nsplitorders)
+      double precision born_wgt
       double precision p(0:3,nexternal),probne,zhw(nexternal)
      $     ,xmcxsec(nexternal),xkern(2),xkernazi(2),factor,N_p
      $     ,emscwgt(nexternal),MCsec(nexternal,max_bcol),sumMCsec
@@ -761,11 +762,11 @@ c min(i_fks,j_fks) is the mother of the FKS pair
       if (mcatnlo_delta) then
 ! compute and include the Delta Sudakov:
          if(.not.is_pt_hard) call complete_xmcsubt(p,lzone,xmcxsec
-     $        ,xmcxsec2,MCsec,probne)
+     $        ,xmcxsec2,MCsec,probne,born_wgt)
       else
 ! assign emsca on statistical basis (don't need flow here): 
          if(.not.is_pt_hard) call assign_emsca_and_flow_statistical(
-     $        xmcxsec,xmcxsec2,MCsec,lzone,idum,ddum)
+     $        xmcxsec,xmcxsec2,MCsec,lzone,idum,ddum,born_wgt)
 ! include the bogus no-emission probability:
          xmcxsec(1:ipartners(0))=xmcxsec(1:ipartners(0))*probne
          amp_split_xmcxsec(1:amp_split_size,1:ipartners(0))=
@@ -1496,7 +1497,7 @@ c Main loop over colour partners used to end here
 c Finalises the MC counterterm computations performed in xmcsubt(),
 c fills arrays relevant to shower scales, and computes Delta
       subroutine complete_xmcsubt(p,lzone,xmcxsec,xmcxsec2,MCsec
-     $     ,probne)
+     $     ,probne,born_wgt)
       implicit none
       include "born_nhel.inc"
       include 'nFKSconfigs.inc'
@@ -1507,6 +1508,8 @@ c fills arrays relevant to shower scales, and computes Delta
 
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
+
+      double precision born_wgt
 
       double precision emsca_bare,ptresc,ref_scale,
      & scalemin,scalemax,emscainv
@@ -1706,7 +1709,7 @@ c
       
 c Given xmcxec,etc., returns jflow, wgt and fills emsca in common block:
       call assign_emsca_and_flow_statistical(xmcxsec,xmcxsec2,MCsec
-     $     ,lzone,jflow,wgt)
+     $     ,lzone,jflow,wgt,born_wgt)
       
 c S-event information:
 c id's and mothers read from born_leshouche.inc;
@@ -2529,7 +2532,7 @@ c
 
       
       subroutine assign_emsca_and_flow_statistical(xmcxsec,xmcxsec2
-     $     ,MCsec,lzone,jflow,wgt)
+     $     ,MCsec,lzone,jflow,wgt,dummy)
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
@@ -2555,7 +2558,7 @@ c
       common /pborn/   p_born
 c Jamp amplitudes of the Born (to be filled with a call the sborn())
       double Precision amp2(ngraphs),jamp2(0:ncolor)
-      common/to_amps/  amp2         ,jamp2
+C      common/to_amps/  amp2         ,jamp2
 c Stuff to be written (depending on AddInfoLHE) onto the LHE file
       integer iSorH_lhe,ifks_lhe(fks_configs) ,jfks_lhe(fks_configs)
      &     ,fksfather_lhe(fks_configs) ,ipartner_lhe(fks_configs)
@@ -2594,6 +2597,10 @@ c Input check
 c Compute MC cross section
          wgt=0d0
          wgt2=0d0
+
+         amp2(:) = 0d0
+         jamp2(:) = 0d0
+
          do i=1,max_bcol
             sumMCsec(i)=0d0
          enddo
@@ -2645,7 +2652,7 @@ c Assign flow on statistical basis
             endif
          else
              ! use the born-bars
-            call sborn(p_born,dummy)
+            call sborn_amp(p_born,amp2,jamp2,dummy)
             wgt1=0.d0
             do i=1,max_bcol
                wgt1=wgt1+jamp2(i)
@@ -2845,7 +2852,7 @@ c the same method
       common/pborn/p_born
 
       double Precision amp2(ngraphs), jamp2(0:ncolor)
-      common/to_amps/  amp2,       jamp2
+C      common/to_amps/  amp2,       jamp2
 
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
@@ -2907,6 +2914,8 @@ c
 c
 c BORN/BORNTILDE
 C check if momenta have to be rotated
+      amp2(:) = 0d0
+      jamp2(:) = 0d0
       if ((ileg.eq.1.or.ileg.eq.2) .and.
      &    (j_fks.eq.2 .and. nexternal-1.ne.3)) then
 c Rotation according to innerpin.m. Use rotate_invar() if a more 
@@ -2921,11 +2930,11 @@ c might flip when rotating the momenta.
             p_born_rot(3,i)=-p_born(3,i)
          enddo
          calculatedBorn=.false.
-         call sborn(p_born_rot,wgt_born)
+         call sborn_amp(p_born_rot,amp2,jamp2,wgt_born)
          if (iextra_cnt.gt.0) call extra_cnt(p_born_rot, iextra_cnt, ans_extra_cnt)
          calculatedBorn=.false.
       else
-         call sborn(p_born,wgt_born)
+         call sborn_amp(p_born,amp2,jamp2,wgt_born)
          if (iextra_cnt.gt.0) call extra_cnt(p_born, iextra_cnt, ans_extra_cnt)
       endif
 

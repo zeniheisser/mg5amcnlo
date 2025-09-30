@@ -1307,7 +1307,7 @@ c the same method
       common/pborn/p_born
 
       double Precision amp2(ngraphs), jamp2(0:ncolor)
-      common/to_amps/  amp2,       jamp2
+C      common/to_amps/  amp2,       jamp2
 
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
@@ -1370,7 +1370,9 @@ c
       
 c
 C BORN
-      call sborn(p_born,wgt_born)
+      amp2(:) = 0d0
+      jamp2(:) = 0d0
+      call sborn_amp(p_born,amp2,jamp2,wgt_born)
       do iord = 1, nsplitorders
         if (.not.split_type(iord).or.(iord.ne.qed_pos.and.iord.ne.qcd_pos)) cycle
         born(iord)=dble(ans_cnt(1,iord))
@@ -1403,11 +1405,11 @@ c might flip when rotating the momenta.
             p_born_rot(3,i)=-p_born(3,i)
           enddo
           calculatedBorn=.false.
-          call sborn(p_born_rot,wgt_born)
+          call sborn_amp(p_born_rot,amp2,jamp2,wgt_born)
           if (iextra_cnt.gt.0) call extra_cnt(p_born_rot, iextra_cnt, ans_extra_cnt)
           calculatedBorn=.false.
         else
-          call sborn(p_born,wgt_born)
+          call sborn_amp(p_born,amp2,jamp2,wgt_born)
           if (iextra_cnt.gt.0) call extra_cnt(p_born, iextra_cnt, ans_extra_cnt)
         endif
 

@@ -37,7 +37,7 @@ c to the list of weights using the add_wgt subroutine
         orders_tag=get_orders_tag(orders)
         amp_pos=iamp
         wgt1=amp_split(iamp)*f_b/g**(qcd_power)
-        call add_wgt(2,orders,wgt1,0d0,0d0)
+        call add_wgt(2,orders,wgt1,0d0,0d0,wgt_c,0d0)
       enddo
 
       call cpu_time(tAfter)
@@ -234,7 +234,7 @@ c   approximation
      $         *f_b/g**(qcd_power)
           wgt1=wgt1*2d0 ! missing factor in the sudakov correction
           ! the type will be 20+the value of the sudakov mode
-          call add_wgt(20+sud_mod,orders_ew,wgt1,0d0,0d0)
+          call add_wgt(20+sud_mod,orders_ew,wgt1,0d0,0d0,wgt_c,0d0)
         endif
 
         !!!! then the contribution of QCD origin
@@ -252,7 +252,7 @@ c   approximation
      $         *f_b/g**(qcd_power)
           wgt1=wgt1*2d0 ! missing factor in the sudakov correction
           ! the type will be 20+the value of the sudakov mode
-          call add_wgt(20+sud_mod,orders_qcd,wgt1,0d0,0d0)
+          call add_wgt(20+sud_mod,orders_qcd,wgt1,0d0,0d0,wgt_c,0d0)
         endif
        enddo
       enddo
@@ -495,7 +495,7 @@ C to make sure that it cannot be incorrectly understood.
          do i=1,nsplitorders
            orders(i)=-1
          enddo
-         call add_wgt(7,orders,-veto_compensating_factor*f_nb,0d0,0d0)
+         call add_wgt(7,orders,-veto_compensating_factor*f_nb,0d0,0d0,born_wgt,0d0)
         write(*,*) 'FIX VETOXSEC in FKS_EW'
         stop
       endif
@@ -529,8 +529,8 @@ C to make sure that it cannot be incorrectly understood.
            g2=g**(QCD_power-2)
            wgt1=wgt1 - fxfx_exp_rewgt*born_wgt*f_nb/g2/(4d0*pi)
         endif
-        call add_wgt(3,orders,wgt1,wgt2,wgt3)
-        call add_wgt(15,orders,wgt4,0d0,0d0)
+        call add_wgt(3,orders,wgt1,wgt2,wgt3,born_wgt,0d0)
+        call add_wgt(15,orders,wgt4,0d0,0d0,born_wgt,0d0)
       enddo
 c Special for the soft-virtual needed for the virt-tricks. The
 c *_wgt_mint variable should be directly passed to the mint-integrator
@@ -551,7 +551,7 @@ c and not be part of the plots nor computation of the cross section.
         born_wgt_mint(iamp)=born_wgt_mint(iamp)
      $       +amp_split_born_for_virt(iamp)*f_nb
         wgt1=wgt1/g**(QCD_power)
-        call add_wgt(14,orders,wgt1,0d0,0d0)
+        call add_wgt(14,orders,wgt1,0d0,0d0,born_wgt,0d0)
       enddo
 
 C This is the counterterm for the 6f->5f scheme change 
@@ -571,7 +571,7 @@ C of parton distributions (e.g. NNPDF2.3).
         wgt6f1=amp_split_6to5f(iamp)*f_nb/g**(qcd_power)
         wgt6f2=amp_split_6to5f_mur(iamp)*f_nb/g**(qcd_power)
         wgt6f3=amp_split_6to5f_muf(iamp)*f_nb/g**(qcd_power)
-        call add_wgt(3,orders,wgt6f1,wgt6f2,wgt6f3)
+        call add_wgt(3,orders,wgt6f1,wgt6f2,wgt6f3,born_wgt,0d0)
       enddo
 
 C This is the counterterm for the change of scheme
@@ -592,7 +592,7 @@ C wrt the hard matrix element. Relevant for lepton collisions.
         wgtal1=amp_split_alpha(iamp)*f_nb/g**(qcd_power)
         wgtal2=amp_split_alpha_mur(iamp)*f_nb/g**(qcd_power)
         wgtal3=amp_split_alpha_muf(iamp)*f_nb/g**(qcd_power)
-        call add_wgt(3,orders,wgtal1,wgtal2,wgtal3)
+        call add_wgt(3,orders,wgtal1,wgtal2,wgtal3,born_wgt,0d0)
       enddo
 
       call cpu_time(tAfter)
@@ -637,10 +637,10 @@ c its value to the list of weights using the add_wgt subroutine
         amp_pos=iamp
         wgt1=amp_split(iamp)*s_ev*f_r/g**(qcd_power)
         if (sudakov_damp.gt.0d0) then
-          call add_wgt(1,orders,wgt1*sudakov_damp,0d0,0d0)
+          call add_wgt(1,orders,wgt1*sudakov_damp,0d0,0d0,0d0,fx_ev)
         endif
         if (sudakov_damp.lt.1d0) then
-          call add_wgt(11,orders,wgt1*(1d0-sudakov_damp),0d0,0d0)
+          call add_wgt(11,orders,wgt1*(1d0-sudakov_damp),0d0,0d0,0d0,fx_ev)
         endif
       enddo
       call cpu_time(tAfter)
@@ -702,7 +702,7 @@ c the list of weights using the add_wgt subroutine
         g22=g**(QCD_power)
         if (replace_MC_subt.gt.0d0) then
           wgt1=amp_split(iamp)*s_s/g22*replace_MC_subt
-          call add_wgt(8,orders,-wgt1*f_s_MC_H,0d0,0d0)
+          call add_wgt(8,orders,-wgt1*f_s_MC_H,0d0,0d0,0d0,fx_s)
           wgt1=wgt1*f_s_MC_S
         else
           wgt1=0d0
@@ -710,7 +710,7 @@ c the list of weights using the add_wgt subroutine
         if (xi_i_fks_ev.le.xiScut_used) then
           wgt1=wgt1-amp_split(iamp)*s_s*f_s/g22
         endif
-        if (wgt1.ne.0d0) call add_wgt(4,orders,wgt1,0d0,0d0)
+        if (wgt1.ne.0d0) call add_wgt(4,orders,wgt1,0d0,0d0,0d0,fx_s)
       enddo
 
       call cpu_time(tAfter)
@@ -796,7 +796,7 @@ c to the list of weights using the add_wgt subroutine
         g22=g**(QCD_power)
         if (replace_MC_subt.gt.0d0) then
           wgt1=amp_split(iamp)*s_c/g22*replace_MC_subt
-          call add_wgt(9,orders,-wgt1*f_c_MC_H,0d0,0d0)
+          call add_wgt(9,orders,-wgt1*f_c_MC_H,0d0,0d0,0d0,fx_c)
           wgt1=wgt1*f_c_MC_S
         else
           wgt1=0d0
@@ -811,7 +811,7 @@ c to the list of weights using the add_wgt subroutine
         else
           wgt3=0d0
         endif
-        if (wgt1.ne.0d0 .or. wgt3.ne.0d0) call add_wgt(5,orders,wgt1,0d0,wgt3)
+        if (wgt1.ne.0d0 .or. wgt3.ne.0d0) call add_wgt(5,orders,wgt1,0d0,wgt3,0d0,fx_c)
       enddo
 
       call cpu_time(tAfter)
@@ -906,7 +906,7 @@ c value to the list of weights using the add_wgt subroutine
         g22=g**(QCD_power)
         if (replace_MC_subt.gt.0d0) then
           wgt1=-amp_split(iamp)*s_sc/g22*replace_MC_subt
-          call add_wgt(10,orders,-wgt1*f_sc_MC_H,0d0,0d0)
+          call add_wgt(10,orders,-wgt1*f_sc_MC_H,0d0,0d0,0d0,fx_sc)
           wgt1=wgt1*f_sc_MC_S
         else
           wgt1=0d0
@@ -927,7 +927,7 @@ c value to the list of weights using the add_wgt subroutine
         else
           wgt3=0d0
         endif
-        if (wgt1.ne.0d0 .or. wgt3.ne.0d0) call add_wgt(6,orders,wgt1,0d0,wgt3)
+        if (wgt1.ne.0d0 .or. wgt3.ne.0d0) call add_wgt(6,orders,wgt1,0d0,wgt3,0d0,fx_sc)
       enddo
 
       call cpu_time(tAfter)
@@ -956,6 +956,7 @@ c respectively.
      $     ,sevmc,zhw(nexternal),xmcxsec(nexternal),g22,wgt1
      $     ,xlum_mc_fact,fks_Hij
       external fks_Sij,fks_Hij
+      double precision    born_wgt
       logical lzone(nexternal),flagmc,passcuts
       double precision    xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3)
      $                    ,p_i_fks_cnt(0:3,-2:2)
@@ -978,7 +979,7 @@ c respectively.
       common/counter_subt_diverge/n_MC_subt_diverge
       call cpu_time(tBefore)
       call compute_xmcsubt_complete(p,probne,gfactsf,gfactcl,flagmc
-     $     ,lzone,zhw,nofpartners,xmcxsec)
+     $     ,lzone,zhw,nofpartners,xmcxsec,born_wgt)
       if (f_MC_S.eq.0d0 .and. f_MC_H.eq.0d0) return
       if(UseSfun)then
          sevmc = fks_Sij(p,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
@@ -1001,10 +1002,10 @@ c respectively.
                 g22=g**(QCD_power)
                 wgt1=sevmc*f_MC_S*xlum_mc_fact*
      &               amp_split_xmcxsec(iamp,i)/g22
-                call add_wgt(12,orders,wgt1,0d0,0d0)
+                call add_wgt(12,orders,wgt1,0d0,0d0,born_wgt,0d0)
                 wgt1=sevmc*f_MC_H*xlum_mc_fact*
      &               amp_split_xmcxsec(iamp,i)/g22
-                call add_wgt(13,orders,-wgt1,0d0,0d0)
+                call add_wgt(13,orders,-wgt1,0d0,0d0,born_wgt,0d0)
               enddo
             endif
          enddo
@@ -1459,7 +1460,7 @@ c f_* multiplication factors for Born and nbody
       integer            this_config
       common/to_mconfigs/this_config
       Double Precision amp2(ngraphs), jamp2(0:ncolor)
-      common/to_amps/  amp2,          jamp2
+C      common/to_amps/  amp2,          jamp2
       double precision   diagramsymmetryfactor
       common /dsymfactor/diagramsymmetryfactor
       double precision      f_b,f_nb
@@ -1486,8 +1487,10 @@ c f_* multiplication factors for Born and nbody
 
 c Compute the multi-channel enhancement factor 'enhance'.
       enhance=1.d0
+      amp2(:) = 0d0
+      jamp2(:) = 0d0
       if (p_born(0,1).gt.0d0) then
-         call sborn(p_born,wgt_c)
+         call sborn_amp(p_born,amp2,jamp2,wgt_c)
       elseif(p_born(0,1).lt.0d0)then
          enhance=0d0
       endif
@@ -1518,6 +1521,9 @@ c Compute the multi-channel enhancement factor 'enhance'.
          endif
       endif
 
+      amp2(:) = 0d0
+      jamp2(:) = 0d0
+
 c In the case there is the special phase-space mapping for resonances,
 C or when not doing event projection
 c use the Born computed with those as the mapping.
@@ -1530,7 +1536,7 @@ c use the Born computed with those as the mapping.
             pas(0:3,nexternal)=0d0
             pas(0:3,1:nexternal-1)=p_born_used(0:3,1:nexternal-1)
             call set_alphas(pas)
-            call sborn(p_born_used,wgt_c)
+            call sborn_amp(p_born_used,amp2,jamp2,wgt_c)
             call set_alphas(p_ev)
             calculatedBorn=.false.
          elseif(p_born_used(0,1).lt.0d0)then
@@ -1771,7 +1777,7 @@ c equal to ione, so no need to define separate factors.
       end
 
       
-      subroutine add_wgt(type,orders,wgt1,wgt2,wgt3)
+      subroutine add_wgt(type,orders,wgt1,wgt2,wgt3,wgt_born,wgt_real)
 c Adds a contribution to the list in weight_lines. 'type' sets the type
 c of the contribution and wgt1..wgt3 are the coefficients multiplying
 c the logs. The arguments are:
@@ -1873,6 +1879,7 @@ c        contribution
       integer type,i,j
       logical foundIt,foundOrders
       double precision wgt1,wgt2,wgt3
+      double precision wgt_born,wgt_real
       integer orders(nsplitorders)
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
@@ -1890,8 +1897,6 @@ c        contribution
       integer                                      ngluons,nquarks(-6:6)
       common/numberofparticles/fkssymmetryfactor,fkssymmetryfactorBorn,
      &                         fkssymmetryfactorDeg,ngluons,nquarks
-      double precision       wgt_ME_born,wgt_ME_real
-      common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
       integer need_matching_S(nexternal),need_matching_H(nexternal)
      $     ,need_matching_cuts(nexternal)
       common /c_need_matching/ need_matching_S,need_matching_H
@@ -2003,8 +2008,8 @@ C schemes; it is needed when there are tagged photons around
 c Compensate for the fact that in the Born matrix elements, we use the
 c identical particle symmetry factor of the corresponding real emission
 c matrix elements
-      wgt_ME_tree(1,icontr)=wgt_me_born
-      wgt_ME_tree(2,icontr)=wgt_me_real
+      wgt_ME_tree(1,icontr)=wgt_born
+      wgt_ME_tree(2,icontr)=wgt_real
       do i=1,nexternal
          do j=0,3
             if (p1_cnt(0,1,0).gt.0d0.and.type.ne.5) then
