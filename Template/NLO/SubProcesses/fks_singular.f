@@ -1428,6 +1428,7 @@ c f_* multiplication factors for Born and nbody
       include 'nexternal.inc'
       include 'run.inc'
       include 'genps.inc'
+      include 'orders.inc'
       include 'nFKSconfigs.inc'
       include 'timing_variables.inc'
       double precision xnoborn_cnt,xtot,wgt_c,enhance,enhance_real
@@ -1460,6 +1461,9 @@ c f_* multiplication factors for Born and nbody
       integer            this_config
       common/to_mconfigs/this_config
       Double Precision amp2(ngraphs), jamp2(0:ncolor)
+      complex*16 dummy_ans(2,nsplitorders)
+      DOUBLE PRECISION DUMMY_AMP_SPLIT(AMP_SPLIT_SIZE)
+      DOUBLE COMPLEX DUMMY_AMP_SPLIT_CNT(AMP_SPLIT_SIZE,2,NSPLITORDERS)
 C      common/to_amps/  amp2,          jamp2
       double precision   diagramsymmetryfactor
       common /dsymfactor/diagramsymmetryfactor
@@ -1490,7 +1494,7 @@ c Compute the multi-channel enhancement factor 'enhance'.
       amp2(:) = 0d0
       jamp2(:) = 0d0
       if (p_born(0,1).gt.0d0) then
-         call sborn_amp(p_born,amp2,jamp2,wgt_c)
+         call sborn_amp(p_born,amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,wgt_c,dummy_ans)
       elseif(p_born(0,1).lt.0d0)then
          enhance=0d0
       endif
@@ -1536,7 +1540,7 @@ c use the Born computed with those as the mapping.
             pas(0:3,nexternal)=0d0
             pas(0:3,1:nexternal-1)=p_born_used(0:3,1:nexternal-1)
             call set_alphas(pas)
-            call sborn_amp(p_born_used,amp2,jamp2,wgt_c)
+            call sborn_amp(p_born_used,amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,wgt_c,dummy_ans)
             call set_alphas(p_ev)
             calculatedBorn=.false.
          elseif(p_born_used(0,1).lt.0d0)then
@@ -4693,6 +4697,7 @@ c has soft singularities
       subroutine sborncol_fsr(p,xi_i_fks,y_ij_fks,wgt)
       implicit none
       include "nexternal.inc"
+      include 'genps.inc'
       double precision p(0:3,nexternal),wgt
       double precision xi_i_fks,y_ij_fks
 C  
@@ -4741,8 +4746,11 @@ c Particle types (=color/charges) of i_fks, j_fks and fks_mother
       double precision amp_split_local(amp_split_size)
       logical split_type(nsplitorders) 
       common /c_split_type/split_type
+      double precision amp2(ngraphs), jamp2(0:ncolor)
       complex*16 ans_cnt(2, nsplitorders), wgt1(2)
-      common /c_born_cnt/ ans_cnt
+      DOUBLE PRECISION DUMMY_AMP_SPLIT(AMP_SPLIT_SIZE)
+      DOUBLE COMPLEX DUMMY_AMP_SPLIT_CNT(AMP_SPLIT_SIZE,2,NSPLITORDERS)
+c      common /c_born_cnt/ ans_cnt
       double complex ans_extra_cnt(2,nsplitorders)
       integer iextra_cnt, isplitorder_born, isplitorder_cnt
       common /c_extra_cnt/iextra_cnt, isplitorder_born, isplitorder_cnt
@@ -4764,7 +4772,7 @@ c Unphysical kinematics: set matrix elements equal to zero
       E_i_fks = p(0,i_fks)
       z = 1d0 - E_i_fks/(E_i_fks+E_j_fks)
       t = z * shat/4d0
-      call sborn(p_born,wgt_born)
+      call sborn_amp(p_born,amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,wgt_born,ans_cnt)
       if (iextra_cnt.gt.0)
      1    call extra_cnt(p_born, iextra_cnt, ans_extra_cnt)
       call AP_reduced(j_type,i_type,ch_j,ch_i,t,z,ap)
@@ -4776,7 +4784,7 @@ c Unphysical kinematics: set matrix elements equal to zero
 C check if any extra_cnt is needed
          if (iextra_cnt.gt.0) then
             if (iord.eq.isplitorder_born) then
-               call sborn(p_born,wgt_born)
+               call sborn_amp(p_born,amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,wgt_born,ans_cnt)
                wgt1(1) = ans_cnt(1,iord)
                wgt1(2) = ans_cnt(2,iord)
             elseif (iord.eq.isplitorder_cnt) then
@@ -4789,7 +4797,7 @@ C check if any extra_cnt is needed
                stop
             endif
          else
-            call sborn(p_born,wgt_born)
+            call sborn_amp(p_born,amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,wgt_born,ans_cnt)
             wgt1(1) = ans_cnt(1,iord)
             wgt1(2) = ans_cnt(2,iord)
          endif
@@ -4906,13 +4914,17 @@ C ap and Q contain the QCD(1) and QED(2) Altarelli-Parisi kernel
       parameter (ximag=(0.d0,1.d0))
 
       include 'orders.inc'
+      include 'genps.inc'
       double precision amp_split_local(amp_split_size)
       double complex amp_split_cnt_local(amp_split_size,2,nsplitorders)
       integer iamp
       logical split_type(nsplitorders) 
       common /c_split_type/split_type
+      double precision amp2(ngraphs), jamp2(0:ncolor)
       complex*16 ans_cnt(2, nsplitorders), wgt1(2)
-      common /c_born_cnt/ ans_cnt
+      DOUBLE PRECISION DUMMY_AMP_SPLIT(AMP_SPLIT_SIZE)
+      DOUBLE COMPLEX DUMMY_AMP_SPLIT_CNT(AMP_SPLIT_SIZE,2,NSPLITORDERS)
+c      common /c_born_cnt/ ans_cnt
       double complex ans_extra_cnt(2,nsplitorders)
       integer iextra_cnt, isplitorder_born, isplitorder_cnt
       common /c_extra_cnt/iextra_cnt, isplitorder_born, isplitorder_cnt
@@ -4956,7 +4968,7 @@ C check if any extra_cnt is needed
          if (iextra_cnt.gt.0) then
             if (iord.eq.isplitorder_born) then
             ! this is the contribution from the born ME
-               call sborn(p_born_used,wgt_born)
+               call sborn_amp(p_born_used,amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,wgt_born,ans_cnt)
                wgt1(1:2) = ans_cnt(1:2,iord)
             else if (iord.eq.isplitorder_cnt) then
             ! this is the contribution from the extra cnt
@@ -4967,7 +4979,7 @@ C check if any extra_cnt is needed
                stop
             endif
          else
-            call sborn(p_born_used,wgt_born)
+            call sborn_amp(p_born_used,amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,wgt_born,ans_cnt)
             wgt1(1:2) = ans_cnt(1:2,iord)
         endif
         amp_split_cnt_local(1:amp_split_size,1,iord)=
@@ -5648,6 +5660,13 @@ c      include "fks.inc"
      &     ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
       include "coupl.inc"
+      include 'orders.inc'
+      include 'genps.inc'
+
+      complex*16 ans_cnt(2,nsplitorders)
+      double precision amp2(ngraphs), jamp2(0:ncolor)
+      DOUBLE PRECISION DUMMY_AMP_SPLIT(AMP_SPLIT_SIZE)
+      DOUBLE COMPLEX DUMMY_AMP_SPLIT_CNT(AMP_SPLIT_SIZE,2,NSPLITORDERS)
 
       integer m,n
 
@@ -5668,7 +5687,6 @@ c      include "fks.inc"
       logical need_color_links, need_charge_links
       common /c_need_links/need_color_links, need_charge_links
       integer ipos_ord
-      include 'orders.inc'
       double precision amp_split_soft(amp_split_size)
       common /to_amp_split_soft/amp_split_soft
 
@@ -5681,7 +5699,7 @@ c Call the Born to be sure that 'CalculatedBorn' is done correctly. This
 c should always be done before calling the color-correlated Borns,
 c because of the caching of the diagrams.
 c
-      call sborn(p_born(0,1),wgt1)
+      call sborn_amp(p_born(0,1),amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,wgt1,ans_cnt)
 c
 C Reset the amp_split array
       amp_split(1:amp_split_size) = 0d0
@@ -5693,8 +5711,8 @@ C Reset the amp_split array
             n=fks_j_from_i(i_fks,j)
             if ((m.ne.n .or. (m.eq.n .and. pmass(m).ne.ZERO)) .and.
      &           n.ne.i_fks.and.m.ne.i_fks) then
-C wgt includes the gs/w^2 
-               call sborn_sf(p_born,m,n,wgt)
+C wgt includes the gs/w^2
+               call sborn_sf(p_born,m,n,wgt,ans_cnt)
                if (wgt.ne.0d0) then
                   call eikonal_reduced(pp,m,n,i_fks,j_fks,
      #                                 xi_i_fks,y_ij_fks,eik)
@@ -5838,8 +5856,11 @@ c Particle types (=color/charges) of i_fks, j_fks and fks_mother
       integer i_type,j_type,m_type
       double precision ch_i, ch_j, ch_m
       common/cparticle_types/i_type,j_type,m_type,ch_i,ch_j,ch_m
+      double precision amp2(ngraphs), jamp2(0:ncolor)
       complex*16 ans_cnt(2, nsplitorders), wgt1(2)
-      common /c_born_cnt/ ans_cnt
+      DOUBLE PRECISION DUMMY_AMP_SPLIT(AMP_SPLIT_SIZE)
+      DOUBLE COMPLEX DUMMY_AMP_SPLIT_CNT(AMP_SPLIT_SIZE,2,NSPLITORDERS)
+c      common /c_born_cnt/ ans_cnt
       logical split_type(nsplitorders) 
       common /c_split_type/split_type
       
@@ -5977,7 +5998,7 @@ C check if any extra_cnt is needed
         if (iextra_cnt.gt.0) then
             if (iord.eq.isplitorder_born) then
             ! this is the contribution from the born ME
-               call sborn(p_born_used,wgt_born)
+               call sborn_amp(p_born_used,amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,wgt_born,ans_cnt)
                wgt1(1) = ans_cnt(1,iord)
                wgt1(2) = ans_cnt(2,iord)
             else if (iord.eq.isplitorder_cnt) then
@@ -5990,7 +6011,7 @@ C check if any extra_cnt is needed
                stop
             endif
         else
-           call sborn(p_born_used,wgt_born)
+           call sborn_amp(p_born_used,amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,wgt_born,ans_cnt)
            wgt1(1) = ans_cnt(1,iord)
            wgt1(2) = ans_cnt(2,iord)
         endif
@@ -6747,8 +6768,11 @@ c For the MINT folding
       common/to_split_type_used/split_type_used
       logical need_color_links, need_charge_links
       common /c_need_links/need_color_links, need_charge_links
+      double precision amp2(ngraphs), jamp2(0:ncolor)
       complex*16 ans_cnt(2, nsplitorders)
-      common /c_born_cnt/ ans_cnt
+      DOUBLE PRECISION DUMMY_AMP_SPLIT(AMP_SPLIT_SIZE)
+      DOUBLE COMPLEX DUMMY_AMP_SPLIT_CNT(AMP_SPLIT_SIZE,2,NSPLITORDERS)
+c      common /c_born_cnt/ ans_cnt
       double precision oneo8pi2
       parameter(oneo8pi2 = 1d0/(8d0*pi**2))
       include 'nFKSconfigs.inc'
@@ -6845,7 +6869,7 @@ c entering this function
          stop
       endif
 
-      call sborn(p_born,wgt1)
+      call sborn_amp(p_born,amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,wgt1,ans_cnt)
 
 c Born contribution:
       bsv_wgt=wgt1
@@ -6971,7 +6995,7 @@ c I(reg) terms, eq 5.5 of FKS
 C setup the fks i/j info
          call fks_inc_chooser()
 C the following call to born is to setup the goodhel(nfksprocess)
-         call sborn(p_born,wgt1)
+         call sborn_amp(p_born,amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,wgt1,ans_cnt)
          contr=0d0
          do i=1,fks_j_from_i(i_fks,0)
             do j=1,i
@@ -6982,8 +7006,8 @@ C the following call to born is to setup the goodhel(nfksprocess)
 c To be sure that color-correlated Borns work well, we need to have
 c *always* a call to sborn(p_born,wgt) just before. This is okay,
 c because there is a call above in this subroutine
-C wgt includes the gs/w^2 
-                  call sborn_sf(p_born,m,n,wgt)
+C wgt includes the gs/w^2
+                  call sborn_sf(p_born,m,n,wgt,ans_cnt)
                   if (wgt.ne.0d0) then
                      call eikonal_Ireg(p,m,n,xicut_used,eikIreg)
                      contr=contr+wgt*eikIreg
@@ -7014,7 +7038,7 @@ c Finite part of one-loop corrections
 c convert to Binoth Les Houches Accord standards
       virt_wgt=0d0
 
-      call sborn(p_born, wgt1)
+      call sborn_amp(p_born, amp2, jamp2, DUMMY_AMP_SPLIT, DUMMY_AMP_SPLIT_CNT, wgt1, ans_cnt)
       ! use the amp_split_cnt as the born to approximate the virtual
       ! check which one of the two (QCD, QED) is !=0
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
@@ -7098,7 +7122,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 c eq.(MadFKS.C.13)
       if(abrv.ne.'virt')then
          ! this is to update the amp_split array
-         call sborn(p_born,wgt1)
+         call sborn_amp(p_born,amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,wgt1,ans_cnt)
          bsv_wgt_mufoqes=0d0
          do iamp=1,amp_split_size
             if (dble(amp_split_cnt(iamp,1,qcd_pos)).eq.0d0) cycle
@@ -7141,7 +7165,7 @@ c  eq.(MadFKS.C.14)
       amp_split_wgtwnstmpmur(1:amp_split_size)=0d0
 
       if(abrv.ne.'born' .and. abrv.ne.'grid')then
-         call sborn(p_born,wgt1)
+         call sborn_amp(p_born,amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,wgt1,ans_cnt)
          if(abrv(1:2).eq.'vi')then
             wgtwnstmpmur=0.d0
          else
@@ -7224,7 +7248,7 @@ c we need the pure NLO terms only
       endif
 
       if (ComputePoles) then
-         call sborn(p_born,wgt1)
+         call sborn_amp(p_born,amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,wgt1,ans_cnt)
 
          print*,"           "
          write(*,123)((p(i,j),i=0,3),j=1,nexternal)
@@ -7523,8 +7547,12 @@ c      include "fks.inc"
       common /to_amp_split_poles_FKS/amp_split_poles_FKS
       double precision amp_split_soft(amp_split_size)
       common /to_amp_split_soft/amp_split_soft
+      double precision amp2(ngraphs), jamp2(0:ncolor)
       complex*16 ans_cnt(2, nsplitorders)
-      common /c_born_cnt/ ans_cnt
+      DOUBLE PRECISION DUMMY_AMP_SPLIT(AMP_SPLIT_SIZE)
+      DOUBLE COMPLEX DUMMY_AMP_SPLIT_CNT(AMP_SPLIT_SIZE,2,NSPLITORDERS)
+
+c      common /c_born_cnt/ ans_cnt
       logical need_color_links, need_charge_links
       common /c_need_links/need_color_links, need_charge_links
       double precision oneo8pi2
@@ -7568,7 +7596,7 @@ C links
       enddo
       aso2pi=g**2/(8d0*pi**2)
       aeo2pi=dble(gal(1))**2/(8d0*pi**2)
-      call sborn(p_born,wgt1)
+      call sborn_amp(p_born,amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,wgt1,ans_cnt)
 c QCD Born terms
       contr1 = 0d0
       contr2 = 0d0
@@ -7646,7 +7674,7 @@ c Colour and charge-linked Born terms
 C setup the fks i/j info
         call fks_inc_chooser()
 C the following call to born is to setup the goodhel(nfksprocess)
-        call sborn(p_born,wgt1)
+        call sborn_amp(p_born,amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,wgt1,ans_cnt)
 
         contr1=0d0
         do i=1,fks_j_from_i(i_fks,0)
@@ -7655,7 +7683,7 @@ C the following call to born is to setup the goodhel(nfksprocess)
             n=fks_j_from_i(i_fks,j)
             if( m.ne.n .and. n.ne.i_fks .and. m.ne.i_fks )then
 C wgt includes the gs/w^2 factor
-              call sborn_sf(p_born,m,n,wgt)
+              call sborn_sf(p_born,m,n,wgt,ans_cnt)
 c The factor -2 compensate for that missing in sborn_sf
               wgt=-2d0*wgt
               if(wgt.ne.0.d0)then

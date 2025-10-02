@@ -13,6 +13,7 @@ c
       include 'run.inc'
       include 'nFKSconfigs.inc'
       include 'born_conf.inc' ! needed for mapconfig
+      include 'orders.inc'
       logical mtc,even
       integer i,j,k,nmatch,ibase,ntry,icb(nexternal-1),jc(nexternal)
      $     ,use_config(0:lmaxconfigs)
@@ -25,6 +26,9 @@ c
       integer         nndim
       common/tosigint/nndim
       Double Precision amp2(ngraphs), jamp2(0:ncolor)
+      complex*16 ans_cnt(2,nsplitorders)
+      DOUBLE PRECISION DUMMY_AMP_SPLIT(AMP_SPLIT_SIZE)
+      DOUBLE COMPLEX DUMMY_AMP_SPLIT_CNT(AMP_SPLIT_SIZE,2,NSPLITORDERS)
 C      common/to_amps/  amp2,          jamp2
       double precision p_born(0:3,nexternal-1)
       common /pborn/   p_born
@@ -149,8 +153,8 @@ c     Get and save base amplitudes
 c
       calculatedBorn=.false.
 c Call the Born twice to make sure that all common blocks are correctly filled.
-      call sborn_amp(p_born,amp2,jamp2,wgt1)
-      call sborn_amp(p_born,amp2,jamp2,wgt1)
+      call sborn_amp(p_born,amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,wgt1,ans_cnt)
+      call sborn_amp(p_born,amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,wgt1,ans_cnt)
       do j=1, mapconfig(0)
          saveamp(mapconfig(j)) = amp2(mapconfig(j))
       enddo
@@ -185,7 +189,7 @@ c nexternal is the number for the real configuration. Subtract 1 for the Born.
                enddo
             enddo
             calculatedBorn=.false.
-            call sborn_amp(p_born,amp2,jamp2,wgt1)
+            call sborn_amp(p_born,amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,wgt1,ans_cnt)
 c        Look for matches
             do j=2,mapconfig(0)
                do k=1,j-1

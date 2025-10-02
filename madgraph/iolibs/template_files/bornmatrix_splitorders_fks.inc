@@ -15,6 +15,7 @@ C CONSTANTS
 C 
       implicit none
       include 'nexternal.inc'
+      include 'orders.inc'
       INTEGER NAMPSO, NSQAMPSO
       PARAMETER (NAMPSO=%(nAmpSplitOrders)d, NSQAMPSO=%(nSqAmpSplitOrders)d)
       INTEGER NGRAPHS
@@ -28,20 +29,25 @@ C
 C VARIABLES
 C
       Double Precision amp2(%(ngraphs)d), jamp2(0:%(ncolor)d)
+      COMPLEX*16 ANS_CNT(2, NSPLITORDERS)
+      DOUBLE PRECISION DUMMY_AMP_SPLIT(AMP_SPLIT_SIZE)
+      DOUBLE COMPLEX DUMMY_AMP_SPLIT_CNT(AMP_SPLIT_SIZE,2,NSPLITORDERS)
+
 C
 C BEGIN CODE
 C
       amp2(:) = 0d0
       jamp2(:) = 0D0
+      ans_cnt(:,:) = 0d0
 
-      call SBORN_AMP(P,AMP2,JAMP2,ANS_SUMMED)
+      call SBORN_AMP(P,AMP2,JAMP2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,ANS_SUMMED,ANS_CNT)
 
       return
       end
 
 
 
-      SUBROUTINE SBORN_AMP(P,AMP2,JAMP2,ANS_SUMMED)
+      SUBROUTINE SBORN_AMP(P,AMP2,JAMP2,RET_AMP_SPLIT,RET_AMP_SPLIT_CNT,ANS_SUMMED,ans_cnt)
 C  
 %(info_lines)s
 C
@@ -57,6 +63,8 @@ C CONSTANTS
 C 
       implicit none
       include 'nexternal.inc'
+      include 'has_ewsudakov.inc'
+      include 'orders.inc'
       INTEGER NAMPSO, NSQAMPSO
       PARAMETER (NAMPSO=%(nAmpSplitOrders)d, NSQAMPSO=%(nSqAmpSplitOrders)d)
       INTEGER NGRAPHS
@@ -68,20 +76,21 @@ C
       double precision ans_summed
       double precision amp2b(%(ngraphs)d), jamp2b(0:%(ncolor)d,0:nampso)
       Double Precision amp2(%(ngraphs)d), jamp2(0:%(ncolor)d)
+      COMPLEX*16 ANS_CNT(2, NSPLITORDERS)
+      DOUBLE PRECISION RET_AMP_SPLIT(AMP_SPLIT_SIZE)
+      DOUBLE COMPLEX RET_AMP_SPLIT_CNT(AMP_SPLIT_SIZE,2,NSPLITORDERS)
+
 C
 C VARIABLES
 C
       INTEGER I,J,K
-      include 'has_ewsudakov.inc'
       integer nord_integrated_born
-      include 'orders.inc'
-      COMPLEX*16 ANS(2,0:NSQAMPSO), ANS_CNT(2, NSPLITORDERS)
+      COMPLEX*16 ANS(2,0:NSQAMPSO)
       LOGICAL KEEP_ORDER(NSQAMPSO), KEEP_ORDER_CNT(NSPLITORDERS, NSQAMPSO), FIRSTTIME
       data keep_order / NSQAMPSO * .TRUE. /
       logical keep_order_born(NSQAMPSO)
       common /c_keep_order_B/ keep_order_born
       common /c_keep_order_cnt/ keep_order_cnt 
-      common /c_born_cnt/ ans_cnt
       integer ord_subtract
       data firsttime / .TRUE. /
       integer amp_orders(nsplitorders)
@@ -91,8 +100,6 @@ C
 
       logical split_type_used(nsplitorders)
       common/to_split_type_used/split_type_used
-      logical force_ijglu_zero
-      common /to_force_ijglu/ force_ijglu_zero
 C
 C     FUNCTIONS
 C
@@ -102,8 +109,6 @@ C
 C BEGIN CODE
 C
 C look for orders which match the born order constraint 
-
-force_ijglu_zero = .false.
 
 amp2b(:) = 0.0
 jamp2b(:,:) = 0.0
@@ -227,6 +232,8 @@ C this is to avoid fake non-zero contributions
  if (abs(ans_cnt(2,j)).lt.max_val*tiny) ans_cnt(2,j)=(0d0,0d0)
 enddo
 
+RET_AMP_SPLIT(:) = AMP_SPLIT(:)
+RET_AMP_SPLIT_CNT(:,:,:) = AMP_SPLIT_CNT(:,:,:)
 
  999   return
 END
@@ -291,8 +298,6 @@ C
       double complex amp_split_ewsud_LO2(amp_split_size)
       common /to_amp_split_ewsud_LO2/ amp_split_ewsud_LO2
       integer iden
-      logical force_ijglu_zero
-      common /to_force_ijglu/ force_ijglu_zero
       %(den_factor_lines)s
       integer nfksprocess
       common/c_nfksprocess/nfksprocess
@@ -316,9 +321,8 @@ jamp2(:,:) = 0.0
 jamp2(0,0) = %(ncolor)d
 
       iden=iden_values(nfksprocess)
-force_ijglu_zero = .true.
 
-CALL BORN(P,NHEL,HELL,amp2,jamp2,ANS,borns)
+CALL BORN(P,NHEL,HELL,.true.,amp2,jamp2,ANS,borns)
 
 ans_summed = 0d0
 max_val = 0d0
@@ -407,9 +411,7 @@ C
 %(ij_lines)s
 C  
 C GLOBAL VARIABLES
-C  
-C      common/to_amps_born/  amp2,       jamp2
-C      DATA jamp2(0,0) /   %(ncolor)d/          
+C   
       LOGICAL GOODHEL(NCOMB,%(nconfs)d)
       common /c_goodhel/goodhel
       double complex saveamp(ngraphs,max_bhel)
@@ -482,7 +484,7 @@ C ----------
         if (cond_ij) then
           IF ((GOODHEL(IHEL,nFKSprocess) .OR. GOODHEL(IHEL+SKIP(nFKSprocess),nFKSprocess) .OR. NTRY(nFKSprocess) .LT. 2) ) THEN
             
-            CALL BORN(P1,NHEL(1,IHEL),IHEL,AMP2,JAMP2,T,borns)
+            CALL BORN(P1,NHEL(1,IHEL),IHEL,.false.,AMP2,JAMP2,T,borns)
             DO I=1,NSQAMPSO
                 ANS(1,I)=ANS(1,I)+T(1,I)
                 ANS(2,I)=ANS(2,I)+T(2,I)
@@ -506,7 +508,7 @@ C ----------
       END
        
        
-      SUBROUTINE BORN(P,NHEL,HELL,amp2,jamp2,ANS,borns)
+      SUBROUTINE BORN(P,NHEL,HELL,force_ijglu_zero,amp2,jamp2,ANS,borns)
 C  
 %(info_lines)s
 C RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
@@ -536,6 +538,7 @@ C ARGUMENTS
 C  
       REAL*8 P(0:3,NEXTERNAL-1),borns(2,0:NSQAMPSO)
       INTEGER NHEL(NEXTERNAL-1), HELL
+      logical force_ijglu_zero
       Double Precision amp2(%(ngraphs)d), jamp2(0:%(ncolor)d,0:nampso)
       COMPLEX*16 ANS(2,NSQAMPSO)
 C  
@@ -564,8 +567,6 @@ C      common/to_amps_born/  amp2,       jamp2
       common/c_nfksprocess/nfksprocess
       integer step_hel
       logical cond_ij
-      logical force_ijglu_zero
-      common /to_force_ijglu/ force_ijglu_zero
 
 C
 C FUNCTION

@@ -10,6 +10,7 @@ c intermediate resonances. It also boosts the events to the lab frame
       include "nFKSconfigs.inc"
       include "leshouche_decl.inc"
       include "run.inc"
+      include 'orders.inc'
 
 c Arguments
       double precision p_born(0:3,nexternal-1),pp(0:3,nexternal)
@@ -40,6 +41,9 @@ c Random numbers
 
 c Jamp amplitudes of the Born (to be filled with a call the sborn())
       double Precision amp2(ngraphs), jamp2(0:ncolor)
+      complex*16 dummy_ans_cnt(2,nsplitorders)
+      DOUBLE PRECISION DUMMY_AMP_SPLIT(AMP_SPLIT_SIZE)
+      DOUBLE COMPLEX DUMMY_AMP_SPLIT_CNT(AMP_SPLIT_SIZE,2,NSPLITORDERS)
 C      common/to_amps/  amp2,       jamp2
 
 C iforest and other configuration info. Read once and saved.
@@ -132,7 +136,6 @@ c pt_clust string
       CHARACTER integfour*4      
       CHARACTER(LEN=1000) ptclusstring
       common /c_ptclusstring/ ptclusstring
-      include 'orders.inc'
       logical is_aorg(nexternal)
       common /c_is_aorg/is_aorg
       logical split_type(nsplitorders) 
@@ -277,7 +280,7 @@ c$$$   read(hel_buf,'(15i5)') (jpart(7,i),i=1,nexternal)
          ! iconfig from Born
          amp2(:) = 0d0
          jamp2(:) = 0d0
-         call sborn_amp(p_born,amp2,jamp2,wgt1)
+         call sborn_amp(p_born,amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,wgt1,dummy_ans_cnt)
          sumborn=0.d0
          do i=1,max_bcol
             if (icolamp(i,iBornGraph,1)) then

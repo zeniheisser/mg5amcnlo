@@ -1,4 +1,4 @@
-subroutine sborn_sf(p_born,m,n,wgt)
+subroutine sborn_sf(p_born,m,n,wgt,ans_cnt)
           implicit none
           include "nexternal.inc"
           include 'coupl.inc'        
@@ -14,7 +14,7 @@ C the charge-linked if it is a color singlet
           integer i,m,n 
       include 'orders.inc'
       COMPLEX*16 ANS_CNT(2, NSPLITORDERS)
-      common /c_born_cnt/ ans_cnt
+c      common /c_born_cnt/ ans_cnt
       LOGICAL KEEP_ORDER_CNT(NSPLITORDERS, NSQAMPSO)
       common /c_keep_order_cnt/ keep_order_cnt 
       double precision charges_born(nexternal-1)

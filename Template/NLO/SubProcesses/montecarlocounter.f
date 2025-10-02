@@ -2540,6 +2540,7 @@ c
       include 'madfks_mcatnlo.inc'
       include "genps.inc"
       include 'nFKSconfigs.inc'
+      include 'orders.inc'
       double precision tiny
       parameter       (tiny=1d-7)
       integer npartner,cflows,i,jflow,jpartner,mpartner
@@ -2558,6 +2559,9 @@ c
       common /pborn/   p_born
 c Jamp amplitudes of the Born (to be filled with a call the sborn())
       double Precision amp2(ngraphs),jamp2(0:ncolor)
+      complex*16 ans_cnt(2,nsplitorders)
+      DOUBLE PRECISION DUMMY_AMP_SPLIT(AMP_SPLIT_SIZE)
+      DOUBLE COMPLEX DUMMY_AMP_SPLIT_CNT(AMP_SPLIT_SIZE,2,NSPLITORDERS)
 C      common/to_amps/  amp2         ,jamp2
 c Stuff to be written (depending on AddInfoLHE) onto the LHE file
       integer iSorH_lhe,ifks_lhe(fks_configs) ,jfks_lhe(fks_configs)
@@ -2652,7 +2656,7 @@ c Assign flow on statistical basis
             endif
          else
              ! use the born-bars
-            call sborn_amp(p_born,amp2,jamp2,dummy)
+            call sborn_amp(p_born,amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,dummy,ans_cnt)
             wgt1=0.d0
             do i=1,max_bcol
                wgt1=wgt1+jamp2(i)
@@ -2894,7 +2898,9 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
       logical split_type(nsplitorders) 
       common /c_split_type/split_type
       complex*16 ans_cnt(2, nsplitorders), wgt1(2)
-      common /c_born_cnt/ ans_cnt
+      DOUBLE PRECISION DUMMY_AMP_SPLIT(AMP_SPLIT_SIZE)
+      DOUBLE COMPLEX DUMMY_AMP_SPLIT_CNT(AMP_SPLIT_SIZE,2,NSPLITORDERS)
+c      common /c_born_cnt/ ans_cnt
       double complex ans_extra_cnt(2,nsplitorders)
       integer iord, iextra_cnt, isplitorder_born, isplitorder_cnt
       common /c_extra_cnt/iextra_cnt, isplitorder_born, isplitorder_cnt
@@ -2930,11 +2936,11 @@ c might flip when rotating the momenta.
             p_born_rot(3,i)=-p_born(3,i)
          enddo
          calculatedBorn=.false.
-         call sborn_amp(p_born_rot,amp2,jamp2,wgt_born)
+         call sborn_amp(p_born_rot,amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,wgt_born,ans_cnt)
          if (iextra_cnt.gt.0) call extra_cnt(p_born_rot, iextra_cnt, ans_extra_cnt)
          calculatedBorn=.false.
       else
-         call sborn_amp(p_born,amp2,jamp2,wgt_born)
+         call sborn_amp(p_born,amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,wgt_born,ans_cnt)
          if (iextra_cnt.gt.0) call extra_cnt(p_born, iextra_cnt, ans_extra_cnt)
       endif
 

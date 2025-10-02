@@ -166,6 +166,11 @@ c, logfromLOip1
 
       external alphas
       double precision alphas
+      
+      double precision amp2(ngraphs), jamp2(0:ncolor)
+      complex*16 ans_cnt_local(2,nsplitorders)
+      double precision amp_split_local(amp_split_size)
+      double complex amp_split_cnt_local(amp_split_size,2,nsplitorders)
 
 C-----
 C  BEGIN CODE
@@ -608,8 +613,8 @@ c----------
           chosen_hel=0
           EWSUD_HELSELECT=chosen_hel
 
-          call sborn(p_born, born)
-          amp_split_born(:) = amp_split(:)
+          call sborn_amp(p_born,amp2, jamp2, amp_split_local, amp_split_cnt_local, born, ans_cnt_local)
+          amp_split_born(:) = amp_split_local(:)
           call sudakov_wrapper(p_born)
           call BinothLHA(p_born, born, virt_wgt)
           USERHEL=-1
