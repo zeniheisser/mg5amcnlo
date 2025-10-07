@@ -855,6 +855,9 @@ c Particle types (=colour) of i_fks, j_fks and fks_mother
       common /c_is_aorg/is_aorg
       ! amp split stuff
       include 'orders.inc'
+
+      double precision ret_amp_split(amp_split_size)
+
       integer iamp
       double precision amp_split_gfunc(amp_split_size)
       common /to_amp_split_gfunc/amp_split_gfunc
@@ -873,17 +876,17 @@ c
       if (is_aorg(i_fks))then
 c i_fks is gluon/photon
          call set_cms_stuff(izero)
-         call sreal(p1_cnt(0,1,0),zero,y_ij_fks,wgts)
+         call sreal(p1_cnt(0,1,0),zero,y_ij_fks,wgts,ret_amp_split)
          do iamp=1, amp_split_size
            amp_split_s(iamp) = amp_split(iamp)
          enddo
          call set_cms_stuff(ione)
-         call sreal(p1_cnt(0,1,1),xi_i_fks,one,wgtc)
+         call sreal(p1_cnt(0,1,1),xi_i_fks,one,wgtc,ret_amp_split)
          do iamp=1, amp_split_size
            amp_split_c(iamp) = amp_split(iamp)
          enddo
          call set_cms_stuff(itwo)
-         call sreal(p1_cnt(0,1,2),zero,one,wgtsc)
+         call sreal(p1_cnt(0,1,2),zero,one,wgtsc,ret_amp_split)
          do iamp=1, amp_split_size
            amp_split_sc(iamp) = amp_split(iamp)
          enddo

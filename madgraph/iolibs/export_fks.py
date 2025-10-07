@@ -1802,9 +1802,11 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
 
         # the real me wrapper
         text = \
-            """subroutine smatrix_real(p, wgt)
+            """subroutine smatrix_real(p, ret_amp_split, wgt)
             implicit none
             include 'nexternal.inc'
+            include 'orders.inc'
+            double precision ret_amp_split(amp_split_size)
             double precision p(0:3, nexternal)
             double precision wgt
             integer nfksprocess
@@ -1822,7 +1824,7 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
             for n, info in enumerate(matrix_element.get_fks_info_list()):
                 text += \
                     """if (nfksprocess.eq.%(n)d) then
-                    call smatrix%(n_me)d(p, wgt)
+                    call smatrix%(n_me)d_amp(p, ret_amp_split, wgt)
                     else""" % {'n': n + 1, 'n_me' : info['n_me']}
                 text1 += \
                     """if (nfksprocess.eq.%(n)d) then

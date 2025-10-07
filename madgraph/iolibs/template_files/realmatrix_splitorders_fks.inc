@@ -12,6 +12,7 @@ C
 C CONSTANTS
 C 
       implicit none
+      include 'orders.inc'
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
       INTEGER NSQAMPSO
@@ -26,7 +27,56 @@ C
       INTEGER I,J
       REAL*8 ANS(0:NSQAMPSO)
       LOGICAL KEEP_ORDER(NSQAMPSO), FIRSTTIME
+      data keep_order / NSQAMPSO*.TRUE. /
+      data firsttime / .TRUE. /
+      integer amp_orders(nsplitorders)
+      double precision ans_max, tiny
+      parameter (tiny = 1d-12)
+      DOUBLE PRECISION DUMMY_AMP_SPLIT(AMP_SPLIT_SIZE)
+C
+C     FUNCTIONS
+C
+      integer GETORDPOWFROMINDEX%(proc_prefix)s
+      integer orders_to_amp_split_pos
+C
+C BEGIN CODE
+C
+
+CALL SMATRIX%(proc_prefix)s_AMP(P,DUMMY_AMP_SPLIT,ANS_SUMMED)
+
+END
+
+
+      SUBROUTINE SMATRIX%(proc_prefix)s_AMP(P,RET_AMP_SPLIT,ANS_SUMMED)
+C  
+%(info_lines)s
+C
+C
+C     Return the sum of the split orders which are required in orders.inc (NLO_ORDERS)
+C  
+C  
+%(process_lines)s
+C
+C
+C CONSTANTS
+C 
+      implicit none
       include 'orders.inc'
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=%(nexternal)d)
+      INTEGER NSQAMPSO
+      PARAMETER (NSQAMPSO=%(nSqAmpSplitOrders)d)
+C  
+C ARGUMENTS 
+C 
+      REAL*8 P(0:3,NEXTERNAL), ANS_SUMMED
+      DOUBLE PRECISION RET_AMP_SPLIT(AMP_SPLIT_SIZE)
+C
+C VARIABLES
+C
+      INTEGER I,J
+      REAL*8 ANS(0:NSQAMPSO)
+      LOGICAL KEEP_ORDER(NSQAMPSO), FIRSTTIME
       data keep_order / NSQAMPSO*.TRUE. /
       data firsttime / .TRUE. /
       integer amp_orders(nsplitorders)
@@ -85,6 +135,9 @@ enddo
 C avoid fake non-zeros
 if (dabs(ans_summed).lt.tiny*ans_max) ans_summed=0d0
 
+RET_AMP_SPLIT(1:AMP_SPLIT_SIZE) = AMP_SPLIT(1:AMP_SPLIT_SIZE)
+
+return
 END
 
 
