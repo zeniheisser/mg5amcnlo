@@ -70,7 +70,7 @@ C take into account the fact that this is for QCD
 C this is to avoid fake non-zero contributions 
 if (abs(ans_summed).lt.max_val*tiny) ans_summed=0d0
 
-c amp_split_cnt(:,:,:) = ret_amp_split_cnt(:,:,:)
+C amp_split_cnt(:,:,:) = ret_amp_split_cnt(:,:,:)
 
 return
 END
