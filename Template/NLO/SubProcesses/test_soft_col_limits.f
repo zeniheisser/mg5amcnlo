@@ -349,7 +349,7 @@ c Initialise shower_S_scale to a large value, not to get spurious dead zones
                if(ilim.eq.0)then
                  fxl_split(1,iamp) = amp_split_mc(iamp)*jac_cnt(0)
                else
-                 fxl_split(1,iamp) = amp_split(iamp)*jac_cnt(0)
+                 fxl_split(1,iamp) = ret_amp_split(iamp)*jac_cnt(0)
                endif
                wfxl_split(1,iamp)=jac_cnt(0)
             enddo
@@ -371,7 +371,7 @@ c because otherwise fresh random will be used...
             wlimit(1)=wgt
             do iamp=1,amp_split_size
                if (ilim.eq.2) then
-                 limit_split(1,iamp) = amp_split(iamp)*wgt
+                 limit_split(1,iamp) = ret_amp_split(iamp)*wgt
                else
                  limit_split(1,iamp) = amp_split_mc(iamp)*wgt
                endif
@@ -401,7 +401,7 @@ c because otherwise fresh random will be used...
                   fxl(i)=fx*wgt
                   wfxl(i)=jac_cnt(0)
                   do iamp=1,amp_split_size
-                     fxl_split(i,iamp) = amp_split(iamp)*jac_cnt(0)
+                     fxl_split(i,iamp) = ret_amp_split(iamp)*jac_cnt(0)
                      wfxl_split(i,iamp)=jac_cnt(0)
                   enddo
                   calculatedBorn=.false.
@@ -422,7 +422,7 @@ c because otherwise fresh random will be used...
                wlimit(i)=wgt
                do iamp=1,amp_split_size
                   if (ilim.eq.2) then
-                    limit_split(i,iamp) = amp_split(iamp)*wgt
+                    limit_split(i,iamp) = ret_amp_split(iamp)*wgt
                   else
                     limit_split(i,iamp) = amp_split_mc(iamp)*wgt
                   endif
@@ -581,7 +581,7 @@ c
               if(ilim.eq.0)then
                 fxl_split(1,iamp) = amp_split_mc(iamp)*jac_cnt(1)
               else
-                fxl_split(1,iamp) = amp_split(iamp)*jac_cnt(1)
+                fxl_split(1,iamp) = ret_amp_split(iamp)*jac_cnt(1)
               endif
                wfxl_split(1,iamp) = jac_cnt(1)
             enddo
@@ -596,7 +596,7 @@ c
             wlimit(1)=wgt
             do iamp=1,amp_split_size
               if (ilim.eq.2) then
-                limit_split(1,iamp) = amp_split(iamp)*wgt
+                limit_split(1,iamp) = ret_amp_split(iamp)*wgt
               else
                 limit_split(1,iamp) = amp_split_mc(iamp)*wgt
               endif
@@ -626,7 +626,7 @@ c
                   fxl(i)=fx*jac_cnt(1)
                   wfxl(i)=jac_cnt(1)
                   do iamp=1,amp_split_size
-                     fxl_split(i,iamp) = amp_split(iamp)*jac_cnt(1)
+                     fxl_split(i,iamp) = ret_amp_split(iamp)*jac_cnt(1)
                      wfxl_split(i,iamp) = jac_cnt(1)
                   enddo
                   calculatedBorn=.false.
@@ -647,7 +647,7 @@ c
                wlimit(i)=wgt
                do iamp=1,amp_split_size
                  if (ilim.eq.2) then
-                   limit_split(i,iamp) = amp_split(iamp)*wgt
+                   limit_split(i,iamp) = ret_amp_split(iamp)*wgt
                  else
                    limit_split(i,iamp) = amp_split_mc(iamp)*wgt
                  endif

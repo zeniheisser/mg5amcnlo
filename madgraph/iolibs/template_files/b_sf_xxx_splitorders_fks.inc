@@ -1,4 +1,4 @@
-      SUBROUTINE SB_SF_%(ilink)3.3d(P,ANS_SUMMED)
+      SUBROUTINE SB_SF_%(ilink)3.3d(P,ANS_SUMMED,RET_AMP_SPLIT_CNT)
 C  
 %(info_lines)s
 C
@@ -32,6 +32,7 @@ C
       double precision tiny
       parameter (tiny = 1d-12)
       double precision max_val
+      double complex ret_amp_split_cnt(amp_split_size,2,nsplitorders)
 C
 C     FUNCTIONS
 C
@@ -46,7 +47,7 @@ C color-linked borns are called for QCD-type emissions
       max_val = 0d0
 
 C reset the amp_split_cnt array
-amp_split_cnt(1:amp_split_size,1:2,1:nsplitorders) = dcmplx(0d0,0d0)
+ret_amp_split_cnt(1:amp_split_size,1:2,1:nsplitorders) = dcmplx(0d0,0d0)
 
 
 do i = 1, nsqampso
@@ -62,12 +63,14 @@ C take into account the fact that this is for QCD
           if (j.eq.qcd_pos) amp_orders(j) = amp_orders(j) + 2
          enddo
          !amp_split_cnt(orders_to_amp_split_pos(amp_orders),1,qcd_pos) = ans(I)
-         if(abs(ans(i)).gt.max_val*tiny) amp_split_cnt(orders_to_amp_split_pos(amp_orders),1,qcd_pos) = ans(i)
+         if(abs(ans(i)).gt.max_val*tiny) ret_amp_split_cnt(orders_to_amp_split_pos(amp_orders),1,qcd_pos) = ans(i)
         endif
       enddo
 
 C this is to avoid fake non-zero contributions 
 if (abs(ans_summed).lt.max_val*tiny) ans_summed=0d0
+
+c amp_split_cnt(:,:,:) = ret_amp_split_cnt(:,:,:)
 
 return
 END

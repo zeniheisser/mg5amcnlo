@@ -544,17 +544,17 @@ c i_fks is gluon/photon
          call set_cms_stuff(izero)
          call sreal(p1_cnt(0,1,0),zero,y_ij_fks,wgts,ret_amp_split)
          do iamp=1, amp_split_size
-           amp_split_s(iamp) = amp_split(iamp)
+           amp_split_s(iamp) = ret_amp_split(iamp)
          enddo
          call set_cms_stuff(ione)
          call sreal(p1_cnt(0,1,1),xi_i_fks,one,wgtc,ret_amp_split)
          do iamp=1, amp_split_size
-           amp_split_c(iamp) = amp_split(iamp)
+           amp_split_c(iamp) = ret_amp_split(iamp)
          enddo
          call set_cms_stuff(itwo)
          call sreal(p1_cnt(0,1,2),zero,one,wgtsc,ret_amp_split)
          do iamp=1, amp_split_size
-           amp_split_sc(iamp) = amp_split(iamp)
+           amp_split_sc(iamp) = ret_amp_split(iamp)
          enddo
          wgt=wgts+(1-gfactcl)*(wgtc-wgtsc)
          wgt=wgt*(1-gfactsf)
@@ -1382,7 +1382,7 @@ C BORN
         if (.not.split_type(iord).or.(iord.ne.qed_pos.and.iord.ne.qcd_pos)) cycle
         born(iord)=dble(ans_cnt(1,iord))
         do iamp=1, amp_split_size
-          amp_split_born(iamp,iord) = dble(amp_split_cnt(iamp,1,iord))
+          amp_split_born(iamp,iord) = dble(dummy_amp_split_cnt(iamp,1,iord))
         enddo
       enddo
 
@@ -1446,7 +1446,7 @@ C check if any extra_cnt is needed
             if (abs(m_type).eq.3.or.dabs(ch_m).gt.0d0) then
               amp_split_borntilde(iamp,iord) = czero
             else
-              amp_split_borntilde(iamp,iord) = amp_split_cnt(iamp,2,iord)
+              amp_split_borntilde(iamp,iord) = dummy_amp_split_cnt(iamp,2,iord)
             endif
           enddo
         enddo

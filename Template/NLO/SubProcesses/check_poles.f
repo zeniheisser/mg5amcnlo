@@ -65,6 +65,11 @@ cc
       common /to_polecheck/force_polecheck, polecheck_passed
       integer ret_code_ml
       common /to_ret_code/ret_code_ml
+
+      double precision amp2(ngraphs), jamp2(0:ncolor)
+      complex*16 ans_cnt(2, nsplitorders)
+      double precision ret_amp_split(amp_split_size)
+      double complex ret_amp_split_cnt(amp_split_size,2,nsplitorders)
       
 C-----
 C  BEGIN CODE
@@ -218,11 +223,11 @@ c initialization
           enddo
 
           CALL UPDATE_AS_PARAM()
-          call sborn(p_born, born)
+          call sborn_amp(p_born, amp2, jamp2, ret_amp_split, ret_amp_split_cnt, born, ans_cnt)
           ! extra initialisation calls: skip the first point
           ! as well as any other points which is used for initialization
           ! (according to the return code)
-          call BinothLHA(p_born, born, virt_wgt)
+          call BinothLHA(p_born, born, virt_wgt, ret_amp_split)
           if (npointsChecked.eq.0) then
              if (mod(ret_code_ml,100)/10.eq.3 .or.
      &            mod(ret_code_ml,100)/10.eq.4) then

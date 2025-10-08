@@ -115,7 +115,7 @@ ans_summed = 0d0
 ans_max = 0d0
 
 C reset the amp_split array
-amp_split(1:amp_split_size) = 0d0
+ret_amp_split(1:amp_split_size) = 0d0
 
 do i = 1, nsqampso
  ans_max = max(dabs(ans(i)),ans_max)
@@ -128,14 +128,14 @@ C   keep track of the separate pieces correspoinding to different coupling combi
     do j = 1, nsplitorders
       amp_orders(j) = GETORDPOWFROMINDEX%(proc_prefix)s(j, i)
     enddo
-    if (abs(ans(i)).gt.ans_max*tiny) amp_split(orders_to_amp_split_pos(amp_orders)) = ans(i)
+    if (abs(ans(i)).gt.ans_max*tiny) ret_amp_split(orders_to_amp_split_pos(amp_orders)) = ans(i)
  endif
 enddo
 
 C avoid fake non-zeros
 if (dabs(ans_summed).lt.tiny*ans_max) ans_summed=0d0
 
-RET_AMP_SPLIT(1:AMP_SPLIT_SIZE) = AMP_SPLIT(1:AMP_SPLIT_SIZE)
+C AMP_SPLIT(1:AMP_SPLIT_SIZE) = RET_AMP_SPLIT(1:AMP_SPLIT_SIZE)
 
 return
 END

@@ -1,4 +1,4 @@
-      subroutine BinothLHA(p,born_wgt,virt_wgt)
+      subroutine BinothLHA(p,born_wgt,virt_wgt,amp_split_born)
 c
 c Given the Born momenta, this is the Binoth-Les Houches interface file
 c that calls the OLP and returns the virtual weights. For convenience
@@ -60,6 +60,7 @@ c statistics for MadLoop
       logical, allocatable, save :: keep_order(:)
       include 'a0Gmuconv.inc'
       include 'orders.inc'
+      double precision amp_split_born(1:amp_split_size)
       integer amp_orders(nsplitorders)
       integer split_amp_orders(nsplitorders), iamp
       double precision amp_split_finite_ML(amp_split_size)
@@ -280,7 +281,7 @@ C one must use a mixed Gmu-alpha0 renormalisation.
       if (ntagph.ne.0) then
         do i = 1, AMP_SPLIT_SIZE_BORN 
           call amp_split_pos_to_orders(i, amp_orders)
-          born_wgt = amp_split(i)
+          born_wgt = amp_split_born(i)
           ! this is the number of powers of 'e' in the born
           qed_pow_b = amp_orders(qed_pos)
           amp_orders(qed_pos) = amp_orders(qed_pos) + 2

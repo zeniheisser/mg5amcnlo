@@ -616,7 +616,7 @@ c----------
           call sborn_amp(p_born,amp2, jamp2, amp_split_local, amp_split_cnt_local, born, ans_cnt_local)
           amp_split_born(:) = amp_split_local(:)
           call sudakov_wrapper(p_born)
-          call BinothLHA(p_born, born, virt_wgt)
+          call BinothLHA(p_born, born, virt_wgt,amp_split_local)
           USERHEL=-1
           call SLOOPMATRIX_THRES(p_born,virthel,1d-3,PREC_FOUND
      $ ,RET_CODE)

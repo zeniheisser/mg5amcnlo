@@ -176,8 +176,8 @@ ans_summed = 0d0
 max_val = 0d0
 
 C reset the amp_split array
-amp_split(1:amp_split_size) = 0d0
-amp_split_cnt(1:amp_split_size,1:2,1:nsplitorders) = dcmplx(0d0,0d0)
+ret_amp_split(1:amp_split_size) = 0d0
+ret_amp_split_cnt(1:amp_split_size,1:2,1:nsplitorders) = dcmplx(0d0,0d0)
 
 do i = 1, nsqampso
  max_val = max(max_val, abs(ans(1,I)))
@@ -189,7 +189,7 @@ C   keep track of the separate pieces correspoinding to different coupling combi
     do j = 1, nsplitorders
       amp_orders(j) = GETORDPOWFROMINDEX_B(j, i)
     enddo
-    if(abs(ans(1,i)).gt.max_val*tiny) amp_split(orders_to_amp_split_pos(amp_orders)) = ans(1,i)
+    if(abs(ans(1,i)).gt.max_val*tiny) ret_amp_split(orders_to_amp_split_pos(amp_orders)) = ans(1,i)
  endif
 enddo
 C this is to avoid fake non-zero contributions 
@@ -223,8 +223,8 @@ C will be multiplied by the corresponding squared coupling
       if (k.eq.j) amp_orders(k) = amp_orders(k) + 2
    enddo
 C this is to avoid fake non-zero contributions 
-   if (abs(ans(1,I)).gt.max_val*tiny) amp_split_cnt(orders_to_amp_split_pos(amp_orders),1,j) = ans(1,I)
-   if (abs(ans(2,I)).gt.max_val*tiny) amp_split_cnt(orders_to_amp_split_pos(amp_orders),2,j) = ans(2,I)
+   if (abs(ans(1,I)).gt.max_val*tiny) ret_amp_split_cnt(orders_to_amp_split_pos(amp_orders),1,j) = ans(1,I)
+   if (abs(ans(2,I)).gt.max_val*tiny) ret_amp_split_cnt(orders_to_amp_split_pos(amp_orders),2,j) = ans(2,I)
   endif
  enddo
 C this is to avoid fake non-zero contributions 
@@ -232,8 +232,8 @@ C this is to avoid fake non-zero contributions
  if (abs(ans_cnt(2,j)).lt.max_val*tiny) ans_cnt(2,j)=(0d0,0d0)
 enddo
 
-RET_AMP_SPLIT(:) = AMP_SPLIT(:)
-RET_AMP_SPLIT_CNT(:,:,:) = AMP_SPLIT_CNT(:,:,:)
+C AMP_SPLIT(:) = RET_AMP_SPLIT(:)
+C AMP_SPLIT_CNT(:,:,:) = RET_AMP_SPLIT_CNT(:,:,:)
 
  999   return
 END

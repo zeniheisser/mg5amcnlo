@@ -1384,10 +1384,10 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         text += 'integer amp_split_size, amp_split_size_born\n'
         text += 'parameter (amp_split_size = %d)\n' % amp_split_size
         text += '! the first entries in the next line in amp_split are for the born \n'
-        text += 'parameter (amp_split_size_born = %d)\n' % amp_split_size_born
-        text += 'double precision amp_split(amp_split_size)\n'
-        text += 'double complex amp_split_cnt(amp_split_size,2,nsplitorders)\n'
-        text += 'common /to_amp_split/amp_split, amp_split_cnt\n'
+        # text += 'parameter (amp_split_size_born = %d)\n' % amp_split_size_born
+        # text += 'double precision amp_split(amp_split_size)\n'
+        # text += 'double complex amp_split_cnt(amp_split_size,2,nsplitorders)\n'
+        # text += 'common /to_amp_split/amp_split, amp_split_cnt\n'
         writer.line_length=132
         writer.writelines(text)
 
@@ -2838,13 +2838,13 @@ Parameters              %(params)s\n\
                 replace_dict['iflines_col'] += \
                 "c link partons %(m)d and %(n)d \n\
                     %(iff)s ((m.eq.%(m)d .and. n.eq.%(n)d).or.(m.eq.%(n)d .and. n.eq.%(m)d)) then \n\
-                    call sb_sf_%(ilink)3.3d(p_born,wgt_col)\n" \
+                    call sb_sf_%(ilink)3.3d(p_born,wgt_col,ret_amp_split_cnt)\n" \
                     % {'m':m, 'n': n, 'iff': iff, 'ilink': ilink}
             else:
                 replace_dict['iflines_col'] += \
                 "c link partons %(m)d and %(n)d \n\
                     %(iff)s (m.eq.%(m)d .and. n.eq.%(n)d) then \n\
-                    call sb_sf_%(ilink)3.3d(p_born,wgt_col)\n" \
+                    call sb_sf_%(ilink)3.3d(p_born,wgt_col,ret_amp_split_cnt)\n" \
                     % {'m':m, 'n': n, 'iff': iff, 'ilink': ilink}
 
         

@@ -1,7 +1,8 @@
-subroutine sborn_sf(p_born,m,n,wgt,ans_cnt)
+subroutine sborn_sf(p_born,m,n,wgt,ans_cnt,ret_amp_split_cnt)
           implicit none
           include "nexternal.inc"
           include 'coupl.inc'        
+          include 'genps.inc'
           double precision p_born(0:3,nexternal-1), wgt
           integer nsqampso
           parameter (nsqampso = %(nsqorders)d)
@@ -25,6 +26,7 @@ c      common /c_born_cnt/ ans_cnt
       parameter (zero=0d0)
       double precision amp_split_soft(amp_split_size)
       common /to_amp_split_soft/amp_split_soft
+      double complex ret_amp_split_cnt(amp_split_size,2,nsplitorders)
 
       chargeprod = 0d0
 
@@ -37,7 +39,7 @@ C check if need color or charge links, and include the gs/w**2 term here
 %(iflines_col)s
       wgt = wgt_col * g**2
 C update the amp_split_soft, which is summed in sbornsoft
-      amp_split_soft(1:amp_split_size) = dble(amp_split_cnt(1:amp_split_size,1,qcd_pos)) * g**2
+      amp_split_soft(1:amp_split_size) = dble(ret_amp_split_cnt(1:amp_split_size,1,qcd_pos)) * g**2
 
       else if (need_charge_links) then
       chargeprod = charges_born(m) * charges_born(n)
@@ -46,7 +48,7 @@ C add a factor 1/2 for the self-eikonal soft link
       if (m.eq.n) chargeprod = chargeprod / 2d0
       wgt = dble(ans_cnt(1, qed_pos)) * chargeprod * dble(gal(1))**2
 C update the amp_split_soft, which is summed in sbornsoft
-      amp_split_soft(1:amp_split_size) = dble(amp_split_cnt(1:amp_split_size,1,qed_pos)) * chargeprod * dble(gal(1))**2
+      amp_split_soft(1:amp_split_size) = dble(ret_amp_split_cnt(1:amp_split_size,1,qed_pos)) * chargeprod * dble(gal(1))**2
       endif
 
       return 
