@@ -1354,6 +1354,7 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
       complex*16 ans_cnt(2, nsplitorders), wgt1(2)
       DOUBLE PRECISION DUMMY_AMP_SPLIT(AMP_SPLIT_SIZE)
       DOUBLE COMPLEX DUMMY_AMP_SPLIT_CNT(AMP_SPLIT_SIZE,2,NSPLITORDERS)
+      double complex ret_saveamp(ngraphs,max_bhel)
 c      common /c_born_cnt/ ans_cnt
       double complex ans_extra_cnt(2,nsplitorders)
       integer iord, iextra_cnt, isplitorder_born, isplitorder_cnt

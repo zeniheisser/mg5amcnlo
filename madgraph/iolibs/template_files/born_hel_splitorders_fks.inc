@@ -1,4 +1,4 @@
-      SUBROUTINE SBORN_HEL(P,ANS_SUMMED)
+      SUBROUTINE SBORN_HEL(P,ANS_SUMMED,LOC_SAVEAMP)
 C
 C     Return the sum of the split orders which are required in orders.inc (BORN_ORDERS)
 C     Also the values needed for the counterterms are stored in the C_BORN_CNT common block
@@ -25,6 +25,7 @@ C
       COMMON/C_BORN_HEL_SPLIT/WGT_HEL
       DOUBLE PRECISION WGT_HEL_SUMMED(MAX_BHEL)
       COMMON/C_BORN_HEL/WGT_HEL_SUMMED
+      double complex loc_saveamp(%(ngraphs)d,max_bhel)
 C
 C     FUNCTIONS
 C
@@ -37,7 +38,7 @@ C of the fact that they satisfy or not the squared-orders constraints
 
 
 C look for orders which match the born order constraint 
-	  CALL SBORN_HEL_SPLITORDERS(P,ANS)
+	  CALL SBORN_HEL_SPLITORDERS(P,ANS,LOC_SAVEAMP)
 ans_summed = 0d0
   DO J = 1, MAX_BHEL
     WGT_HEL_SUMMED(J) = 0d0
@@ -53,7 +54,7 @@ return
 END
 
 
-    SUBROUTINE SBORN_HEL_SPLITORDERS(P1,ANS)
+    SUBROUTINE SBORN_HEL_SPLITORDERS(P1,ANS,LOC_SAVEAMP)
 C  
 %(info_lines)s
 C
@@ -94,6 +95,7 @@ C
       common /c_goodhel/ goodhel
       double precision savemom(nexternal-1,2)
       common/to_savemom/savemom
+      double complex loc_saveamp(ngraphs,max_bhel)
       logical calculatedBorn
       common/ccalculatedBorn/calculatedBorn
       integer nfksprocess
@@ -121,7 +123,7 @@ C ----------
       ENDDO
       DO IHEL=1,NCOMB
          IF (GOODHEL(IHEL,nFKSprocess)) THEN
-           CALL BORN_HEL_SPLITORDERS(P1,IHEL,T)
+           CALL BORN_HEL_SPLITORDERS(P1,IHEL,T,LOC_SAVEAMP)
            DO I=1,NSQAMPSO
              wgt_hel(i, ihel) = T(I) / DBLE(IDEN)
              ANS(I)=ANS(I)+T(I)
@@ -135,7 +137,7 @@ C ----------
       END
        
        
-      SUBROUTINE BORN_HEL_SPLITORDERS(P,HELL,ANS)
+      SUBROUTINE BORN_HEL_SPLITORDERS(P,HELL,ANS,LOC_SAVEAMP)
 C  
 %(info_lines)s
 C RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
@@ -178,6 +180,7 @@ C GLOBAL VARIABLES
 C  
       double complex saveamp(ngraphs,max_bhel)
       common/to_saveamp/saveamp
+      double complex loc_saveamp(ngraphs,max_bhel)
       logical calculatedBorn
       common/ccalculatedBorn/calculatedBorn
 C
@@ -196,6 +199,7 @@ C ----------
         stop
       elseif (calculatedBorn) then
       do i=1,ngraphs
+C         amp(i)=loc_saveamp(i,hell)
          amp(i)=saveamp(i,hell)
       enddo
       endif
@@ -220,9 +224,10 @@ C ----------
        
 
 
-subroutine PickHelicityMC(p,goodhel,hel,ihel_out,vol)
+subroutine PickHelicityMC(p,goodhel,hel,ihel_out,vol,loc_saveamp)
 implicit none
 include 'nexternal.inc'
+include 'orders.inc'
 INCLUDE 'born_nhel.inc'
 double precision p(0:3, nexternal-1)
 integer goodhel(max_bhel),hel(0:max_bhel)
@@ -240,10 +245,11 @@ integer n_nonzero_ord
 double precision sum_all
 double precision accum, target 
 double precision born_wgt_recomp_direct
+double complex loc_saveamp(%(ngraphs)d,max_bhel)
 
 double precision ran2
 
-call sborn_hel(p,born_wgt_recomp_direct)
+call sborn_hel(p,born_wgt_recomp_direct,loc_saveamp)
 
 C Loop over the various orders of squared Feynman diagrams and compute for each order the sum
 n_nonzero_ord = 0

@@ -1,4 +1,4 @@
-      subroutine BinothLHA(p,born_wgt,virt_wgt)
+      subroutine BinothLHA(p,born_wgt,virt_wgt,amp_split_born)
 c
 c Given the Born momenta, this is the Binoth-Les Houches interface file
 c that calls the OLP and returns the virtual weights. For convenience
@@ -31,6 +31,7 @@ c
       data nbad / 0 /
       include 'orders.inc'
       integer iamp
+      double precision amp_split_born(1:amp_split_size)
       double precision amp_split_finite(amp_split_size)
       common /to_amp_split_finite/amp_split_finite
 
@@ -43,7 +44,7 @@ c
 C the OLP should be able to store the different amplitudes
 C corresponding to different coupling combinations
       do iamp=1,amp_split_size
-        amp_split(iamp)=0d0
+        amp_split_born(iamp)=0d0
         amp_split_finite(iamp)=0d0
       enddo
 c update the ren_scale for MadLoop and the couplings (should be the

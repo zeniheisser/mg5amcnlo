@@ -65,6 +65,7 @@ C
       include 'nexternal.inc'
       include 'has_ewsudakov.inc'
       include 'orders.inc'
+      include 'born_nhel.inc'
       INTEGER NAMPSO, NSQAMPSO
       PARAMETER (NAMPSO=%(nAmpSplitOrders)d, NSQAMPSO=%(nSqAmpSplitOrders)d)
       INTEGER NGRAPHS
@@ -79,6 +80,7 @@ C
       COMPLEX*16 ANS_CNT(2, NSPLITORDERS)
       DOUBLE PRECISION RET_AMP_SPLIT(AMP_SPLIT_SIZE)
       DOUBLE COMPLEX RET_AMP_SPLIT_CNT(AMP_SPLIT_SIZE,2,NSPLITORDERS)
+      double complex ret_saveamp(ngraphs,max_bhel)
 
 C
 C VARIABLES
@@ -169,7 +171,7 @@ endif
  firsttime = .false.
 endif
 
-CALL SBORN_SPLITORDERS(P,AMP2B,JAMP2B,ANS)
+CALL SBORN_SPLITORDERS(P,AMP2B,JAMP2B,ANS,ret_saveamp)
 
 C the born to be integrated
 ans_summed = 0d0
@@ -242,7 +244,7 @@ END
 
 
 
-      SUBROUTINE SBORN_ONEHEL(P,NHEL,HELL,ANS_SUMMED)
+      SUBROUTINE SBORN_ONEHEL(P,NHEL,HELL,ANS_SUMMED,RET_SAVEAMP)
 C  
 %(info_lines)s
 C
@@ -275,6 +277,7 @@ C VARIABLES
 C
       INTEGER I,J,K
       include 'orders.inc'
+      include 'born_nhel.inc'
       COMPLEX*16 ANS(2,NSQAMPSO)
       REAL*8 borns(2,0:NSQAMPSO)
       LOGICAL KEEP_ORDER(NSQAMPSO)
@@ -284,6 +287,7 @@ C
 C DUMMY AMPS FOR LOCALITY
 C
       Double Precision amp2(%(ngraphs)d), jamp2(0:%(ncolor)d,0:nampso)
+      double complex ret_saveamp(%(ngraphs)d,max_bhel)
 
       LOGICAL KEEP_ORDER_CNT(NSPLITORDERS, NSQAMPSO)
       common /c_keep_order_cnt/ keep_order_cnt 
@@ -322,7 +326,7 @@ jamp2(0,0) = %(ncolor)d
 
       iden=iden_values(nfksprocess)
 
-CALL BORN(P,NHEL,HELL,.true.,amp2,jamp2,ANS,borns)
+CALL BORN(P,NHEL,HELL,.true.,amp2,jamp2,ANS,borns,ret_saveamp)
 
 ans_summed = 0d0
 max_val = 0d0
@@ -366,7 +370,7 @@ END
 
 
 
-SUBROUTINE SBORN_SPLITORDERS(P1,AMP2,JAMP2,ANS)
+SUBROUTINE SBORN_SPLITORDERS(P1,AMP2,JAMP2,ANS,RET_SAVEAMP)
 C  
 %(info_lines)s
 C
@@ -416,6 +420,7 @@ C
       common /c_goodhel/goodhel
       double complex saveamp(ngraphs,max_bhel)
       common/to_saveamp/saveamp
+      double complex ret_saveamp(ngraphs,max_bhel)
       double precision savemom(nexternal-1,2)
       common/to_savemom/savemom
       double precision hel_fac
@@ -468,6 +473,7 @@ C ----------
          do j=1,max_bhel
             do jj=1,ngraphs
                saveamp(jj,j)=(0d0,0d0)
+               ret_saveamp(jj,j) = (0d0,0d0)
             enddo
          enddo
       endif
@@ -484,7 +490,7 @@ C ----------
         if (cond_ij) then
           IF ((GOODHEL(IHEL,nFKSprocess) .OR. GOODHEL(IHEL+SKIP(nFKSprocess),nFKSprocess) .OR. NTRY(nFKSprocess) .LT. 2) ) THEN
             
-            CALL BORN(P1,NHEL(1,IHEL),IHEL,.false.,AMP2,JAMP2,T,borns)
+            CALL BORN(P1,NHEL(1,IHEL),IHEL,.false.,AMP2,JAMP2,T,borns,ret_saveamp)
             DO I=1,NSQAMPSO
                 ANS(1,I)=ANS(1,I)+T(1,I)
                 ANS(2,I)=ANS(2,I)+T(2,I)
@@ -508,7 +514,7 @@ C ----------
       END
        
        
-      SUBROUTINE BORN(P,NHEL,HELL,force_ijglu_zero,amp2,jamp2,ANS,borns)
+      SUBROUTINE BORN(P,NHEL,HELL,force_ijglu_zero,amp2,jamp2,ANS,borns,ret_saveamp)
 C  
 %(info_lines)s
 C RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
@@ -558,6 +564,7 @@ C
 C      common/to_amps_born/  amp2,       jamp2
       double complex saveamp(ngraphs,max_bhel)
       common/to_saveamp/saveamp
+      double complex ret_saveamp(ngraphs,max_bhel)
       double precision hel_fac
       integer get_hel,skip(%(nconfs)d)
       common/cBorn/hel_fac,get_hel,skip
@@ -619,8 +626,10 @@ C ----------
         do i=1,ngraphs
           if(ihel.eq.back_hel)then
             saveamp(i,hell)=amp(i)
+            ret_saveamp(i,hell) = amp(i)
           elseif(ihel.eq.-back_hel)then
             saveamp(i,hell+skip(nFKSprocess))=amp(i)
+            ret_saveamp(i,hell+skip(nFKSprocess)) = amp(i)
           else
             write(*,*) "ERROR #1 in born.f"
             stop
@@ -637,6 +646,7 @@ C ----------
             stop
           endif
         enddo
+        ret_saveamp(:,:) = saveamp(:,:)
         endif
 %(jamp_lines)s
 	DO M = 1, NAMPSO

@@ -59,6 +59,7 @@ cc
       integer getordpowfromindex_ml5
       logical, allocatable, save :: keep_order(:)
       include 'orders.inc'
+      include 'born_nhel.inc'
       logical is_aorg(nexternal)
       common /c_is_aorg/is_aorg
       logical force_polecheck, polecheck_passed
@@ -173,6 +174,7 @@ c, logfromLOip1
       complex*16 ans_cnt_local(2,nsplitorders)
       double precision amp_split_local(amp_split_size)
       double complex amp_split_cnt_local(amp_split_size,2,nsplitorders)
+      double complex ret_saveamp(ngraphs,max_bhel)
 
 C-----
 C  BEGIN CODE
@@ -643,9 +645,9 @@ c----------
           chosen_hel=0
           EWSUD_HELSELECT=chosen_hel
 
-          call sborn_amp(p_born, amp2, jamp2, amp_split_local, amp_split_cnt_local, born, ans_cnt_local)
+          call sborn_amp(p_born, amp2, jamp2, amp_split_local, amp_split_cnt_local, born, ans_cnt_local,ret_saveamp)
           amp_split_born(:) = amp_split_local(:)
-          call sudakov_wrapper(p_born)
+          call sudakov_wrapper(p_born,ret_saveamp)
           call BinothLHA(p_born, born, virt_wgt,amp_split_local)
           USERHEL=-1
           call SLOOPMATRIX_THRES(p_born,virthel,1d-3,PREC_FOUND
@@ -748,7 +750,7 @@ c----------
 
          
 
-               CALL SBORN_ONEHEL(P_born,hels(1),chosen_hel,born_hel)
+               CALL SBORN_ONEHEL(P_born,hels(1),chosen_hel,born_hel,ret_saveamp)
                born_from_sborn_onehel(:)=amp_split_ewsud(:)
 
 
@@ -759,7 +761,7 @@ c----------
                  call SLOOPMATRIXHEL_THRES(p_born,chosen_hel,virthel,1d-3,PREC_FOUND
      $ ,RET_CODE)
 
-                 call sudakov_wrapper(p_born)
+                 call sudakov_wrapper(p_born, ret_saveamp)
 
                  if (chosen_hel.eq.1) then
                      born_allhel(iamp)=(0d0,0d0)
@@ -894,7 +896,7 @@ ccc             111    ---> all non_diagonal
               printinewsdkf=.False.
               EWSUD_HELSELECT=chosen_hel
               call sdk_get_hels(chosen_hel, hels)
-              CALL SBORN_ONEHEL(P_born,hels(1),chosen_hel,born_hel)
+              CALL SBORN_ONEHEL(P_born,hels(1),chosen_hel,born_hel,ret_saveamp)
               born_from_sborn_onehel(:)=amp_split_ewsud(:)
 
 
@@ -919,7 +921,7 @@ ccc             111    ---> all non_diagonal
                     if (debug) printinewsdkf=.True. 
                     if(debug) write(*,*) 'HEL LEADCONF =',chosen_hel 
                     if(debug) write(*,*) '    '
-                    call sudakov_wrapper(p_born) 
+                    call sudakov_wrapper(p_born, ret_saveamp)
 
 
                     if(debug.and.nexternal.eq.5) 

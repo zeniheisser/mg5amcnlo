@@ -44,6 +44,7 @@ c Jamp amplitudes of the Born (to be filled with a call the sborn())
       complex*16 dummy_ans_cnt(2,nsplitorders)
       DOUBLE PRECISION DUMMY_AMP_SPLIT(AMP_SPLIT_SIZE)
       DOUBLE COMPLEX DUMMY_AMP_SPLIT_CNT(AMP_SPLIT_SIZE,2,NSPLITORDERS)
+      double complex ret_saveamp(ngraphs,max_bhel)
 C      common/to_amps/  amp2,       jamp2
 
 C iforest and other configuration info. Read once and saved.
@@ -280,7 +281,7 @@ c$$$   read(hel_buf,'(15i5)') (jpart(7,i),i=1,nexternal)
          ! iconfig from Born
          amp2(:) = 0d0
          jamp2(:) = 0d0
-         call sborn_amp(p_born,amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,wgt1,dummy_ans_cnt)
+         call sborn_amp(p_born,amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,wgt1,dummy_ans_cnt,ret_saveamp)
          sumborn=0.d0
          do i=1,max_bcol
             if (icolamp(i,iBornGraph,1)) then

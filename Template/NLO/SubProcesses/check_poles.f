@@ -59,6 +59,7 @@ cc
       integer getordpowfromindex_ml5
       logical, allocatable, save :: keep_order(:)
       include 'orders.inc'
+      include 'born_nhel.inc'
       logical is_aorg(nexternal)
       common /c_is_aorg/is_aorg
       logical force_polecheck, polecheck_passed
@@ -70,7 +71,8 @@ cc
       complex*16 ans_cnt(2, nsplitorders)
       double precision ret_amp_split(amp_split_size)
       double complex ret_amp_split_cnt(amp_split_size,2,nsplitorders)
-      
+      double complex ret_saveamp(ngraphs,max_bhel)
+
 C-----
 C  BEGIN CODE
 C-----  
@@ -223,7 +225,7 @@ c initialization
           enddo
 
           CALL UPDATE_AS_PARAM()
-          call sborn_amp(p_born, amp2, jamp2, ret_amp_split, ret_amp_split_cnt, born, ans_cnt)
+          call sborn_amp(p_born, amp2, jamp2, ret_amp_split, ret_amp_split_cnt, born, ans_cnt, ret_saveamp)
           ! extra initialisation calls: skip the first point
           ! as well as any other points which is used for initialization
           ! (according to the return code)

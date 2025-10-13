@@ -14,6 +14,7 @@ C arguments
 cc
       include 'coupl.inc'
       include 'orders.inc'
+      include 'born_nhel.inc'
 
       double complex amp_split_ewsud(amp_split_size)
       common /to_amp_split_ewsud/ amp_split_ewsud
@@ -56,6 +57,7 @@ cc
       complex*16 ans_cnt_local(2,nsplitorders)
       double precision amp_split_local(amp_split_size)
       double complex amp_split_cnt_local(amp_split_size,2,nsplitorders)
+      double complex ret_saveamp(ngraphs,max_bhel)
 
 C-----
 C  BEGIN CODE
@@ -79,12 +81,12 @@ C-----
       rij_ge_mw = .true.
       do sud_mod = 0,1
         ! call the born
-        call SBORN_AMP(p_born, amp2, jamp2, amp_split_local, amp_split_cnt_local, born, ans_cnt_local)
+        call SBORN_AMP(p_born, amp2, jamp2, amp_split_local, amp_split_cnt_local, born, ans_cnt_local, ret_saveamp)
         amp_split_born(:) = amp_split_local(:)
         wgt_born = amp_split_born(1)
 
         ! call the EWsudakov
-        call sudakov_wrapper(p_born) 
+        call sudakov_wrapper(p_born, ret_saveamp) 
         wgt_sud = 2d0*(amp_split_ewsud_lsc(1)+
      $        amp_split_ewsud_ssc(1)+
      $        amp_split_ewsud_xxc(1)+
@@ -99,12 +101,12 @@ C-----
       s_to_rij = .false.
       rij_ge_mw = .true.
       ! call the born
-      call sborn_amp(p_born, amp2, jamp2, amp_split_local, amp_split_cnt_local, born, ans_cnt_local)
+      call sborn_amp(p_born, amp2, jamp2, amp_split_local, amp_split_cnt_local, born, ans_cnt_local, ret_saveamp)
       amp_split_born(:) = amp_split_local(:)
       wgt_born = amp_split_born(1)
 
       ! call the EWsudakov
-      call sudakov_wrapper(p_born)
+      call sudakov_wrapper(p_born, ret_saveamp)
       wgt_sud = 2d0*(amp_split_ewsud_lsc(1)+
      $        amp_split_ewsud_ssc(1)+
      $        amp_split_ewsud_xxc(1)+
@@ -115,11 +117,11 @@ C-----
       s_to_rij = .false.
       rij_ge_mw = .false.
       ! call the born
-      call sborn_amp(p_born, amp2, jamp2, amp_split_local, amp_split_cnt_local, born, ans_cnt_local)
+      call sborn_amp(p_born, amp2, jamp2, amp_split_local, amp_split_cnt_local, born, ans_cnt_local, ret_saveamp)
       amp_split_born(:) = amp_split_local(:)
       wgt_born = amp_split_born(1)
       ! call the EWsudakov
-      call sudakov_wrapper(p_born)
+      call sudakov_wrapper(p_born, ret_saveamp)
       wgt_sud = 2d0*(amp_split_ewsud_lsc(1)+
      $        amp_split_ewsud_ssc(1)+
      $        amp_split_ewsud_xxc(1)+
@@ -130,11 +132,11 @@ C-----
       s_to_rij = .true.
       rij_ge_mw = .false.
       ! call the born
-      call sborn_amp(p_born, amp2, jamp2, amp_split_local, amp_split_cnt_local, born, ans_cnt_local)
+      call sborn_amp(p_born, amp2, jamp2, amp_split_local, amp_split_cnt_local, born, ans_cnt_local, ret_saveamp)
       amp_split_born(:) = amp_split_local(:)
       wgt_born = amp_split_born(1)
       ! call the EWsudakov
-      call sudakov_wrapper(p_born)
+      call sudakov_wrapper(p_born, ret_saveamp)
       wgt_sud = 2d0*(amp_split_ewsud_lsc(1)+
      $        amp_split_ewsud_ssc(1)+
      $        amp_split_ewsud_xxc(1)+

@@ -1,8 +1,9 @@
-subroutine sborn_sf(p_born,m,n,wgt,ans_cnt,ret_amp_split_cnt)
+subroutine sborn_sf(p_born,m,n,wgt,ans_cnt,ret_amp_split_cnt,loc_saveamp,amp_split_soft)
           implicit none
           include "nexternal.inc"
           include 'coupl.inc'        
           include 'genps.inc'
+          include 'born_nhel.inc'
           double precision p_born(0:3,nexternal-1), wgt
           integer nsqampso
           parameter (nsqampso = %(nsqorders)d)
@@ -12,6 +13,7 @@ C the charge-linked if it is a color singlet
           double complex wgt_born(2,0:nsqampso)
           double precision wgt_col
           double precision chargeprod
+          double precision soft_prefac
           integer i,m,n 
       include 'orders.inc'
       COMPLEX*16 ANS_CNT(2, NSPLITORDERS)
@@ -25,8 +27,9 @@ c      common /c_born_cnt/ ans_cnt
       double precision pmass(nexternal), zero
       parameter (zero=0d0)
       double precision amp_split_soft(amp_split_size)
-      common /to_amp_split_soft/amp_split_soft
+C      common /to_amp_split_soft/amp_split_soft
       double complex ret_amp_split_cnt(amp_split_size,2,nsplitorders)
+      double complex loc_saveamp(ngraphs,max_bhel)
 
       chargeprod = 0d0
 

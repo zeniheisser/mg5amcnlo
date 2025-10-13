@@ -2565,6 +2565,7 @@ c Jamp amplitudes of the Born (to be filled with a call the sborn())
       complex*16 ans_cnt(2,nsplitorders)
       DOUBLE PRECISION DUMMY_AMP_SPLIT(AMP_SPLIT_SIZE)
       DOUBLE COMPLEX DUMMY_AMP_SPLIT_CNT(AMP_SPLIT_SIZE,2,NSPLITORDERS)
+      double complex ret_saveamp(ngraphs,max_bhel)
 C      common/to_amps/  amp2         ,jamp2
 c Stuff to be written (depending on AddInfoLHE) onto the LHE file
       integer iSorH_lhe,ifks_lhe(fks_configs) ,jfks_lhe(fks_configs)
@@ -2659,7 +2660,7 @@ c Assign flow on statistical basis
             endif
          else
              ! use the born-bars
-            call sborn_amp(p_born,amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,dummy,ans_cnt)
+            call sborn_amp(p_born,amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,dummy,ans_cnt,ret_saveamp)
             wgt1=0.d0
             do i=1,max_bcol
                wgt1=wgt1+jamp2(i)
@@ -2903,6 +2904,7 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
       complex*16 ans_cnt(2, nsplitorders), wgt1(2)
       DOUBLE PRECISION DUMMY_AMP_SPLIT(AMP_SPLIT_SIZE)
       DOUBLE COMPLEX DUMMY_AMP_SPLIT_CNT(AMP_SPLIT_SIZE,2,NSPLITORDERS)
+      double complex ret_saveamp(ngraphs,max_bhel)
 c      common /c_born_cnt/ ans_cnt
       double complex ans_extra_cnt(2,nsplitorders)
       integer iord, iextra_cnt, isplitorder_born, isplitorder_cnt
@@ -2939,11 +2941,11 @@ c might flip when rotating the momenta.
             p_born_rot(3,i)=-p_born(3,i)
          enddo
          calculatedBorn=.false.
-         call sborn_amp(p_born_rot,amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,wgt_born,ans_cnt)
+         call sborn_amp(p_born_rot,amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,wgt_born,ans_cnt,ret_saveamp)
          if (iextra_cnt.gt.0) call extra_cnt(p_born_rot, iextra_cnt, ans_extra_cnt)
          calculatedBorn=.false.
       else
-         call sborn_amp(p_born,amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,wgt_born,ans_cnt)
+         call sborn_amp(p_born,amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,wgt_born,ans_cnt,ret_saveamp)
          if (iextra_cnt.gt.0) call extra_cnt(p_born, iextra_cnt, ans_extra_cnt)
       endif
 

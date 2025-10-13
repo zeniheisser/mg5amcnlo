@@ -1,4 +1,4 @@
-      SUBROUTINE SB_SF_%(ilink)3.3d(P,ANS_SUMMED,RET_AMP_SPLIT_CNT)
+      SUBROUTINE SB_SF_%(ilink)3.3d(P,ANS_SUMMED,RET_AMP_SPLIT_CNT,LOC_SAVEAMP)
 C  
 %(info_lines)s
 C
@@ -14,6 +14,7 @@ C CONSTANTS
 C 
 implicit none
       include 'nexternal.inc'
+      include 'born_nhel.inc'
       INTEGER NSQAMPSO
       PARAMETER (NSQAMPSO=%(nSqAmpSplitOrders)d)
 C  
@@ -33,6 +34,7 @@ C
       parameter (tiny = 1d-12)
       double precision max_val
       double complex ret_amp_split_cnt(amp_split_size,2,nsplitorders)
+      double complex loc_saveamp(%(ngraphs)d,max_bhel)
 C
 C     FUNCTIONS
 C
@@ -41,7 +43,7 @@ C
 C
 C BEGIN CODE
 C
-	  CALL SB_SF_%(ilink)3.3d_SPLITORDERS(P,ANS)
+	  CALL SB_SF_%(ilink)3.3d_SPLITORDERS(P,ANS,LOC_SAVEAMP)
 C color-linked borns are called for QCD-type emissions
       ans_summed = 0d0
       max_val = 0d0
@@ -76,7 +78,7 @@ return
 END
 
 
-    SUBROUTINE SB_SF_%(ilink)3.3d_SPLITORDERS(P1,ANS)
+    SUBROUTINE SB_SF_%(ilink)3.3d_SPLITORDERS(P1,ANS,LOC_SAVEAMP)
 C  
 %(info_lines)s
 C
@@ -91,6 +93,7 @@ C
 C CONSTANTS
 C  
       Include "nexternal.inc"
+      include "born_nhel.inc"
       INTEGER     NCOMB
       PARAMETER ( NCOMB=  %(ncomb)d )
       INTEGER NSQAMPSO
@@ -120,6 +123,7 @@ C
       common/ccalculatedBorn/calculatedBorn
       integer nfksprocess
       common/c_nfksprocess/nfksprocess
+      double complex loc_saveamp(ngraphs,max_bhel)
 C ----------
 C BEGIN CODE
 C ----------
@@ -141,7 +145,7 @@ C ----------
       ENDDO
       DO IHEL=1,NCOMB
          IF (GOODHEL(IHEL,nFKSprocess)) THEN
-           CALL B_SF_%(ilink)3.3d(IHEL,T)
+           CALL B_SF_%(ilink)3.3d(IHEL,T,LOC_SAVEAMP)
            DO I=1,NSQAMPSO
              ANS(I)=ANS(I)+T(I)
            ENDDO
@@ -154,7 +158,7 @@ C ----------
       END
        
        
-      SUBROUTINE B_SF_%(ilink)3.3d(HELL,ANS)
+      SUBROUTINE B_SF_%(ilink)3.3d(HELL,ANS,LOC_SAVEAMP)
 C  
 %(info_lines)s
 C RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
@@ -195,6 +199,7 @@ C GLOBAL VARIABLES
 C  
       double complex saveamp(ngraphs,max_bhel)
       common/to_saveamp/saveamp
+      double complex loc_saveamp(ngraphs,max_bhel)
       logical calculatedBorn
       common/ccalculatedBorn/calculatedBorn
 C
@@ -213,6 +218,7 @@ C ----------
         stop
       elseif (calculatedBorn) then
       do i=1,ngraphs
+C         amp(i)=loc_saveamp(i,hell)
          amp(i)=saveamp(i,hell)
       enddo
       endif

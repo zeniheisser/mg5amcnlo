@@ -8,6 +8,7 @@ c
       implicit none
       include "nexternal.inc"
       include "coupl.inc"
+      include 'genps.inc'
       include "../../Source/MODEL/input.inc"
       include 'born_nhel.inc'
       double precision pi, zero,mone
@@ -61,6 +62,7 @@ c statistics for MadLoop
       include 'a0Gmuconv.inc'
       include 'orders.inc'
       double precision amp_split_born(1:amp_split_size)
+      double complex loc_saveamp(ngraphs,max_bhel)
       integer amp_orders(nsplitorders)
       integer split_amp_orders(nsplitorders), iamp
       double precision amp_split_finite_ML(amp_split_size)
@@ -210,7 +212,7 @@ C          different coupling combinations
          elseif (mc_hel.eq.1) then
 c Use the Born helicity amplitudes to sample the helicities of the
 c virtual as flat as possible
-            call PickHelicityMC(p,goodhel,hel,ihel,volh)
+            call PickHelicityMC(p,goodhel,hel,ihel,volh,loc_saveamp)
             !
             fillh=.false.
             call sloopmatrixhel_thres(p,hel(ihel),virt_wgts_hel
