@@ -1,4 +1,4 @@
-      subroutine BinothLHA(p,born_wgt,virt_wgt,amp_split_born)
+      subroutine BinothLHA(p,born_wgt,virt_wgt,amp_split_born,loc_saveamp)
 c
 c Given the Born momenta, this is the Binoth-Les Houches interface file
 c that calls the OLP and returns the virtual weights. For convenience
