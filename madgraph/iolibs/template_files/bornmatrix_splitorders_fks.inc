@@ -16,6 +16,7 @@ C
       implicit none
       include 'nexternal.inc'
       include 'orders.inc'
+      include 'born_nhel.inc'
       INTEGER NAMPSO, NSQAMPSO
       PARAMETER (NAMPSO=%(nAmpSplitOrders)d, NSQAMPSO=%(nSqAmpSplitOrders)d)
       INTEGER NGRAPHS
@@ -32,6 +33,7 @@ C
       COMPLEX*16 ANS_CNT(2, NSPLITORDERS)
       DOUBLE PRECISION DUMMY_AMP_SPLIT(AMP_SPLIT_SIZE)
       DOUBLE COMPLEX DUMMY_AMP_SPLIT_CNT(AMP_SPLIT_SIZE,2,NSPLITORDERS)
+      double complex dummy_saveamp(ngraphs,max_bhel)
 
 C
 C BEGIN CODE
@@ -40,14 +42,14 @@ C
       jamp2(:) = 0D0
       ans_cnt(:,:) = 0d0
 
-      call SBORN_AMP(P,AMP2,JAMP2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,ANS_SUMMED,ANS_CNT)
+      call SBORN_AMP(P,AMP2,JAMP2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,ANS_SUMMED,ANS_CNT,DUMMY_SAVEAMP)
 
       return
       end
 
 
 
-      SUBROUTINE SBORN_AMP(P,AMP2,JAMP2,RET_AMP_SPLIT,RET_AMP_SPLIT_CNT,ANS_SUMMED,ans_cnt)
+      SUBROUTINE SBORN_AMP(P,AMP2,JAMP2,RET_AMP_SPLIT,RET_AMP_SPLIT_CNT,ANS_SUMMED,ANS_CNT,RET_SAVEAMP)
 C  
 %(info_lines)s
 C
@@ -639,14 +641,16 @@ C ----------
         do i=1,ngraphs
           if(ihel.eq.back_hel)then
             amp(i)=saveamp(i,hell)
+            ret_saveamp(i,hell) = saveamp(i,hell)
           elseif(ihel.eq.-back_hel)then
             amp(i)=saveamp(i,hell+skip(nFKSprocess))
+            ret_saveamp(i,hell+skip(nFKSprocess)) = saveamp(i,hell+skip(nFKSprocess))
           else
             write(*,*) "ERROR #1 in born.f"
             stop
           endif
         enddo
-        ret_saveamp(:,:) = saveamp(:,:)
+C        ret_saveamp(:,:) = saveamp(:,:)
         endif
 %(jamp_lines)s
 	DO M = 1, NAMPSO

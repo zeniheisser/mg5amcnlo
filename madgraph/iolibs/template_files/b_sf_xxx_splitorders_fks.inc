@@ -218,8 +218,8 @@ C ----------
         stop
       elseif (calculatedBorn) then
       do i=1,ngraphs
-C         amp(i)=loc_saveamp(i,hell)
-         amp(i)=saveamp(i,hell)
+         amp(i)=loc_saveamp(i,hell)
+C         amp(i)=saveamp(i,hell)
       enddo
       endif
 %(jamp1_lines)s

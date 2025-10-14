@@ -1378,7 +1378,7 @@ c
 C BORN
       amp2(:) = 0d0
       jamp2(:) = 0d0
-      call sborn_amp(p_born,amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,wgt_born,ans_cnt)
+      call sborn_amp(p_born,amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,wgt_born,ans_cnt,ret_saveamp)
       do iord = 1, nsplitorders
         if (.not.split_type(iord).or.(iord.ne.qed_pos.and.iord.ne.qcd_pos)) cycle
         born(iord)=dble(ans_cnt(1,iord))
@@ -1411,11 +1411,11 @@ c might flip when rotating the momenta.
             p_born_rot(3,i)=-p_born(3,i)
           enddo
           calculatedBorn=.false.
-          call sborn_amp(p_born_rot,amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,wgt_born,ans_cnt)
+          call sborn_amp(p_born_rot,amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,wgt_born,ans_cnt,ret_saveamp)
           if (iextra_cnt.gt.0) call extra_cnt(p_born_rot, iextra_cnt, ans_extra_cnt)
           calculatedBorn=.false.
         else
-          call sborn_amp(p_born,amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,wgt_born,ans_cnt)
+          call sborn_amp(p_born,amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,wgt_born,ans_cnt,ret_saveamp)
           if (iextra_cnt.gt.0) call extra_cnt(p_born, iextra_cnt, ans_extra_cnt)
         endif
 
