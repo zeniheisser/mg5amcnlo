@@ -127,7 +127,7 @@ C this is for the orders of the born to integrate
     EXIT 
    endif
   enddo
-  keep_order_born = keep_order
+C  keep_order_born = keep_order
 
 C this is for the orders of the counterterms
   do j = 1, nsplitorders
@@ -153,6 +153,7 @@ C this is for the orders of the counterterms
    !write(*,*) 'BORN: not keeping split order ', i
   endif
  enddo
+ keep_order_born = keep_order
 
 C check that, if one include the sudakov corrections, there is at most one contribution to be integrated at LO
 if (has_ewsudakov.and.nord_integrated_born.gt.1) then
@@ -371,7 +372,6 @@ END
 
 
 
-
 SUBROUTINE SBORN_SPLITORDERS(P1,AMP2,JAMP2,ANS,RET_SAVEAMP)
 C  
 %(info_lines)s
@@ -408,6 +408,131 @@ C
       INTEGER IHEL,IDEN,i,j,jj,glu_ij
       REAL*8 borns(2,0:NSQAMPSO)
       COMPLEX*16 BORNTILDE
+      LOGICAL DO_TRY(%(nconfs)d)
+      DATA DO_TRY /%(nconfs)d*.true./
+      COMPLEX*16 T(2,NSQAMPSO)
+      INTEGER NHEL(NEXTERNAL-1,NCOMB)
+%(helicity_lines)s
+%(den_factor_lines)s
+%(ij_lines)s
+C  
+C GLOBAL VARIABLES
+C   
+      LOGICAL GOODHEL(NCOMB,%(nconfs)d)
+      common /c_goodhel/goodhel
+      double complex ret_saveamp(ngraphs,max_bhel)
+      double precision savemom(nexternal-1,2)
+      common/to_savemom/savemom
+      integer skip(%(nconfs)d)
+      common/cBorn/skip
+      logical calculatedBorn
+      common/ccalculatedBorn/calculatedBorn
+      integer nfksprocess
+      common/c_nfksprocess/nfksprocess
+      logical cond_ij
+C ----------
+C BEGIN CODE
+C ----------
+      iden=iden_values(nfksprocess)
+      glu_ij = ij_values(nfksprocess)
+      if(DO_TRY(nFKSprocess)) then
+        call SBORN_SPLITORDERS_NTRY(P1,AMP2,JAMP2,ANS,RET_SAVEAMP,DO_TRY(nFKSprocess))
+      else
+      DO JJ=1,NGRAPHS
+          amp2(jj)=0d0
+      ENDDO
+      DO I=0,NAMPSO
+      DO JJ=1,int(jamp2(0,0))
+          jamp2(jj,I)=0d0
+      ENDDO
+      ENDDO
+      if (calculatedBorn) then
+         do j=1,nexternal-1
+            if (savemom(j,1).ne.p1(0,j) .or. savemom(j,2).ne.p1(3,j)) then
+               calculatedBorn=.false.
+               write (*,*) "momenta not the same in Born"
+	       stop
+            endif
+         enddo
+      endif
+      if (.not.calculatedBorn) then
+         do j=1,nexternal-1
+            savemom(j,1)=p1(0,j)
+            savemom(j,2)=p1(3,j)
+         enddo
+         ret_saveamp(:,:) = (0d0,0d0)
+      endif
+      DO I=0,NSQAMPSO
+          ANS(1,I) = 0D0
+          ANS(2,I) = 0D0
+      ENDDO
+      DO IHEL=1,NCOMB
+        ! the following lines are to avoid segfaults when glu_ij=0
+        cond_ij=skip(nfksprocess).eq.0
+        if (.not.cond_ij) cond_ij=cond_ij.or.nhel(glu_ij,ihel).EQ.NHEL(GLU_IJ,1)
+        !if (nhel(glu_ij,ihel).EQ.NHEL(GLU_IJ,1).or.skip(nfksprocess).eq.0) then
+        if (cond_ij) then
+          IF ((GOODHEL(IHEL,nFKSprocess) .OR. GOODHEL(IHEL+SKIP(nFKSprocess),nFKSprocess)) ) THEN
+            CALL BORN(P1,NHEL(1,IHEL),IHEL,.false.,AMP2,JAMP2,T,borns,ret_saveamp)
+            DO I=1,NSQAMPSO
+                ANS(1,I)=ANS(1,I)+T(1,I)
+                ANS(2,I)=ANS(2,I)+T(2,I)
+            ENDDO
+	  ENDIF
+        ENDIF
+      ENDDO
+      DO I=1,NSQAMPSO
+      ANS(1,I)=ANS(1,I)/DBLE(IDEN)
+      ANS(2,I)=ANS(2,I)/DBLE(IDEN)
+      ANS(1,0)=ANS(1,0)+ANS(1,I)
+      ANS(2,0)=ANS(2,0)+ANS(2,I)
+      ENDDO
+      calculatedBorn=.true.
+      endif
+      END
+
+
+
+
+      SUBROUTINE SBORN_SPLITORDERS_NTRY(P1,AMP2,JAMP2,ANS,RET_SAVEAMP,DO_TRY)
+C  
+%(info_lines)s
+C
+C RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
+C AND HELICITIES
+C FOR THE POINT IN PHASE SPACE P1(0:3,NEXTERNAL-1)
+C  
+%(process_lines)s
+C
+      IMPLICIT NONE
+C  
+C CONSTANTS
+C  
+      include "nexternal.inc"
+      include "born_nhel.inc"
+      INTEGER     NCOMB
+      PARAMETER ( NCOMB=  %(ncomb)d )
+      INTEGER NAMPSO, NSQAMPSO
+      PARAMETER (NAMPSO=%(nAmpSplitOrders)d, NSQAMPSO=%(nSqAmpSplitOrders)d)
+      INTEGER    THEL
+      PARAMETER (THEL=NCOMB*%(nconfs)d)
+      INTEGER NGRAPHS
+      PARAMETER (NGRAPHS=   %(ngraphs)d)
+C  
+C ARGUMENTS 
+C  
+      REAL*8 P1(0:3,NEXTERNAL-1)
+      Double Precision amp2(ngraphs), jamp2(0:%(ncolor)d,0:NAMPSO)
+      COMPLEX*16 ANS(2,0:NSQAMPSO)
+C  
+C LOCAL VARIABLES 
+C  
+      INTEGER IHEL,IDEN,i,j,jj,glu_ij
+      LOGICAL DO_TRY
+      REAL*8 borns(2,0:NSQAMPSO)
+      COMPLEX*16 BORNTILDE
+      integer max_try
+      data max_try /2/
       INTEGER NTRY(%(nconfs)d)
       DATA NTRY /%(nconfs)d*0/
       COMPLEX*16 T(2,NSQAMPSO)
@@ -423,9 +548,8 @@ C
       double complex ret_saveamp(ngraphs,max_bhel)
       double precision savemom(nexternal-1,2)
       common/to_savemom/savemom
-      double precision hel_fac
-      integer get_hel,skip(%(nconfs)d)
-      common/cBorn/hel_fac,get_hel,skip
+      integer skip(%(nconfs)d)
+      common/cBorn/skip
       logical calculatedBorn
       common/ccalculatedBorn/calculatedBorn
       integer nfksprocess
@@ -437,16 +561,14 @@ C ----------
       iden=iden_values(nfksprocess)
       glu_ij = ij_values(nfksprocess)
       NTRY(nFKSprocess)=NTRY(nFKSprocess)+1
-      if (NTRY(nFKSprocess).lt.2) then
-       if (glu_ij.eq.0) then
-         skip(nfksprocess)=0
-       else
-         skip(nFKSprocess)=1			 
-         do while(nhel(glu_ij ,skip(nFKSprocess)).ne.-NHEL(GLU_IJ ,1))
-            skip(nFKSprocess)=skip(nFKSprocess)+1
-         enddo
-         skip(nFKSprocess)=skip(nFKSprocess)-1
-       endif
+      if (glu_ij.eq.0) then
+            skip(nfksprocess)=0
+      else
+            skip(nFKSprocess)=1			 
+            do while(nhel(glu_ij ,skip(nFKSprocess)).ne.-NHEL(GLU_IJ ,1))
+                  skip(nFKSprocess)=skip(nFKSprocess)+1
+            enddo
+            skip(nFKSprocess)=skip(nFKSprocess)-1
       endif
       DO JJ=1,NGRAPHS
           amp2(jj)=0d0
@@ -476,7 +598,6 @@ C ----------
           ANS(1,I) = 0D0
           ANS(2,I) = 0D0
       ENDDO
-      hel_fac=1d0
       DO IHEL=1,NCOMB
         ! the following lines are to avoid segfaults when glu_ij=0
         cond_ij=skip(nfksprocess).eq.0
@@ -484,7 +605,6 @@ C ----------
         !if (nhel(glu_ij,ihel).EQ.NHEL(GLU_IJ,1).or.skip(nfksprocess).eq.0) then
         if (cond_ij) then
           IF ((GOODHEL(IHEL,nFKSprocess) .OR. GOODHEL(IHEL+SKIP(nFKSprocess),nFKSprocess) .OR. NTRY(nFKSprocess) .LT. 2) ) THEN
-            
             CALL BORN(P1,NHEL(1,IHEL),IHEL,.false.,AMP2,JAMP2,T,borns,ret_saveamp)
             DO I=1,NSQAMPSO
                 ANS(1,I)=ANS(1,I)+T(1,I)
@@ -506,6 +626,9 @@ C ----------
       ANS(2,0)=ANS(2,0)+ANS(2,I)
       ENDDO
       calculatedBorn=.true.
+      if(ntry(nFKSprocess).gt.max_try) then
+            DO_TRY=.FALSE.
+      endif
       END
        
        
@@ -560,9 +683,8 @@ C      common/to_amps_born/  amp2,       jamp2
       double complex saveamp(ngraphs,max_bhel)
       common/to_saveamp/saveamp
       double complex ret_saveamp(ngraphs,max_bhel)
-      double precision hel_fac
-      integer get_hel,skip(%(nconfs)d)
-      common/cBorn/hel_fac,get_hel,skip
+      integer skip(%(nconfs)d)
+      common/cBorn/skip
       logical calculatedBorn
       common/ccalculatedBorn/calculatedBorn
       integer nfksprocess
