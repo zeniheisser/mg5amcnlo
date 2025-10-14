@@ -15,17 +15,19 @@ C
 implicit none
       include 'nexternal.inc'
       include 'born_nhel.inc'
+      include 'orders.inc'
       INTEGER NSQAMPSO
       PARAMETER (NSQAMPSO=%(nSqAmpSplitOrders)d)
 C  
 C ARGUMENTS 
 C 
       REAL*8 P(0:3,NEXTERNAL), ANS_SUMMED
+      double complex ret_amp_split_cnt(amp_split_size,2,nsplitorders)
+      double complex loc_saveamp(%(ngraphs)d,max_bhel)
 C
 C VARIABLES
 C
       INTEGER I,j
-      include 'orders.inc'
       REAL*8 ANS(0:NSQAMPSO)
       LOGICAL KEEP_ORDER_CNT(NSPLITORDERS, NSQAMPSO)
       common /c_keep_order_cnt/ keep_order_cnt 
@@ -33,8 +35,6 @@ C
       double precision tiny
       parameter (tiny = 1d-12)
       double precision max_val
-      double complex ret_amp_split_cnt(amp_split_size,2,nsplitorders)
-      double complex loc_saveamp(%(ngraphs)d,max_bhel)
 C
 C     FUNCTIONS
 C
@@ -72,7 +72,6 @@ C take into account the fact that this is for QCD
 C this is to avoid fake non-zero contributions 
 if (abs(ans_summed).lt.max_val*tiny) ans_summed=0d0
 
-C amp_split_cnt(:,:,:) = ret_amp_split_cnt(:,:,:)
 
 return
 END
@@ -106,6 +105,7 @@ C
 C ARGUMENTS 
 C  
       REAL*8 P1(0:3,NEXTERNAL-1),ANS(0:NSQAMPSO)
+      double complex loc_saveamp(ngraphs,max_bhel)
 C  
 C LOCAL VARIABLES 
 C  
@@ -123,7 +123,6 @@ C
       common/ccalculatedBorn/calculatedBorn
       integer nfksprocess
       common/c_nfksprocess/nfksprocess
-      double complex loc_saveamp(ngraphs,max_bhel)
 C ----------
 C BEGIN CODE
 C ----------
@@ -187,6 +186,7 @@ C ARGUMENTS
 C  
       INTEGER HELL
       REAL*8 ANS(NSQAMPSO)
+      double complex loc_saveamp(ngraphs,max_bhel)
 C  
 C LOCAL VARIABLES 
 C  
@@ -197,9 +197,6 @@ C
 C  
 C GLOBAL VARIABLES
 C  
-      double complex saveamp(ngraphs,max_bhel)
-      common/to_saveamp/saveamp
-      double complex loc_saveamp(ngraphs,max_bhel)
       logical calculatedBorn
       common/ccalculatedBorn/calculatedBorn
 C

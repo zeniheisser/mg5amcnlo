@@ -8,24 +8,24 @@ C CONSTANTS
 C 
 implicit none
       include 'nexternal.inc'
+      include 'orders.inc'
+      INCLUDE 'born_nhel.inc'
       INTEGER NSQAMPSO
       PARAMETER (NSQAMPSO=%(nSqAmpSplitOrders)d)
 C  
 C ARGUMENTS 
 C 
       REAL*8 P(0:3,NEXTERNAL-1), ANS_SUMMED
+      double complex loc_saveamp(%(ngraphs)d,max_bhel)
 C
 C VARIABLES
 C
       INTEGER I, J
-      include 'orders.inc'
       REAL*8 ANS(0:NSQAMPSO)
-      INCLUDE 'born_nhel.inc'
       DOUBLE PRECISION WGT_HEL(NSQAMPSO, MAX_BHEL)
       COMMON/C_BORN_HEL_SPLIT/WGT_HEL
       DOUBLE PRECISION WGT_HEL_SUMMED(MAX_BHEL)
       COMMON/C_BORN_HEL/WGT_HEL_SUMMED
-      double complex loc_saveamp(%(ngraphs)d,max_bhel)
 C
 C     FUNCTIONS
 C
@@ -82,6 +82,7 @@ C
 C ARGUMENTS 
 C  
       REAL*8 P1(0:3,NEXTERNAL-1),ANS(0:NSQAMPSO)
+      double complex loc_saveamp(ngraphs,max_bhel)
 C  
 C LOCAL VARIABLES 
 C  
@@ -95,7 +96,6 @@ C
       common /c_goodhel/ goodhel
       double precision savemom(nexternal-1,2)
       common/to_savemom/savemom
-      double complex loc_saveamp(ngraphs,max_bhel)
       logical calculatedBorn
       common/ccalculatedBorn/calculatedBorn
       integer nfksprocess
@@ -167,6 +167,7 @@ C
       REAL*8 P(0:3,NEXTERNAL-1)
       INTEGER HELL
       REAL*8 ANS(NSQAMPSO)
+      double complex loc_saveamp(ngraphs,max_bhel)
 C  
 C LOCAL VARIABLES 
 C  
@@ -178,9 +179,6 @@ C
 C  
 C GLOBAL VARIABLES
 C  
-      double complex saveamp(ngraphs,max_bhel)
-      common/to_saveamp/saveamp
-      double complex loc_saveamp(ngraphs,max_bhel)
       logical calculatedBorn
       common/ccalculatedBorn/calculatedBorn
 C
@@ -200,7 +198,6 @@ C ----------
       elseif (calculatedBorn) then
       do i=1,ngraphs
          amp(i)=loc_saveamp(i,hell)
-C         amp(i)=saveamp(i,hell)
       enddo
       endif
 %(jamp_lines)s

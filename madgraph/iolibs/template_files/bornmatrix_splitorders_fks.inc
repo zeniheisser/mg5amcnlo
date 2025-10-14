@@ -420,8 +420,6 @@ C GLOBAL VARIABLES
 C   
       LOGICAL GOODHEL(NCOMB,%(nconfs)d)
       common /c_goodhel/goodhel
-      double complex saveamp(ngraphs,max_bhel)
-      common/to_saveamp/saveamp
       double complex ret_saveamp(ngraphs,max_bhel)
       double precision savemom(nexternal-1,2)
       common/to_savemom/savemom
@@ -472,12 +470,7 @@ C ----------
             savemom(j,1)=p1(0,j)
             savemom(j,2)=p1(3,j)
          enddo
-         do j=1,max_bhel
-            do jj=1,ngraphs
-               saveamp(jj,j)=(0d0,0d0)
-               ret_saveamp(jj,j) = (0d0,0d0)
-            enddo
-         enddo
+         ret_saveamp(:,:) = (0d0,0d0)
       endif
       DO I=0,NSQAMPSO
           ANS(1,I) = 0D0
@@ -624,6 +617,14 @@ C ----------
           if (nhel(glu_ij).ne.0) nhel(glu_ij) = ihel
         endif
         if (.not. calculatedBorn) then
+        if(ihel.eq.back_hel)then
+          saveamp(:,hell) = 0d0
+        elseif(ihel.eq.-back_hel)then
+          saveamp(:,hell+skip(nFKSprocess)) = 0d0
+        else
+          write(*,*) "ERROR #1 in born.f"
+          stop
+        endif
 %(helas_calls)s
         do i=1,ngraphs
           if(ihel.eq.back_hel)then
