@@ -94,20 +94,7 @@ C
 C look for orders which match the nlo order constraint 
 
 if (firsttime) then
- do i = 1, nsqampso
-  do j = 1, nsplitorders
-   if(GETORDPOWFROMINDEX%(proc_prefix)s(j, i) .gt. nlo_orders(j)) then
-    keep_order(i) = .false.
-    EXIT 
-   endif
-  enddo
-  if (keep_order(i)) then
-   write(*,*) 'REAL %(proc_prefix)s: keeping split order ', i
-  else
-   write(*,*) 'REAL %(proc_prefix)s: not keeping split order ', i
-  endif
- enddo
- firsttime = .false.
+  call firsttime%(proc_prefix)s_setup(firsttime,keep_order)
 endif
 
 CALL SMATRIX%(proc_prefix)s_SPLITORDERS(P,ANS)
@@ -142,6 +129,39 @@ END
 
 
 
+      SUBROUTINE FIRSTTIME%(proc_prefix)s_SETUP(FIRSTTIME,KEEP_ORDER)
+C
+C     Sets up the orders that match the NLO order constraint
+C
+implicit none
+include 'orders.inc'
+integer i,J
+INTEGER NSQAMPSO
+PARAMETER (NSQAMPSO=%(nSqAmpSplitOrders)d)
+LOGICAL KEEP_ORDER(NSQAMPSO), FIRSTTIME
+C
+C     FUNCTIONS
+C
+      integer GETORDPOWFROMINDEX%(proc_prefix)s
+
+ do i = 1, nsqampso
+  do j = 1, nsplitorders
+   if(GETORDPOWFROMINDEX%(proc_prefix)s(j, i) .gt. nlo_orders(j)) then
+    keep_order(i) = .false.
+    EXIT 
+   endif
+  enddo
+  if (keep_order(i)) then
+   write(*,*) 'REAL %(proc_prefix)s: keeping split order ', i
+  else
+   write(*,*) 'REAL %(proc_prefix)s: not keeping split order ', i
+  endif
+ enddo
+ firsttime = .false.
+
+ end
+
+
       SUBROUTINE SMATRIX%(proc_prefix)s_SPLITORDERS(P,ANS)
 C  
 %(info_lines)s
@@ -173,38 +193,21 @@ C
       SAVE T_SAVE,T_IDENT
       INTEGER NHEL(NEXTERNAL,NCOMB)
 %(helicity_lines)s
-      LOGICAL GOODHEL(NCOMB)
+      LOGICAL GOODHEL(NCOMB), DO_TRY
+      DATA DO_TRY/.TRUE./
       DATA GOODHEL/NCOMB*.FALSE./
-      INTEGER NTRY
-      DATA NTRY/0/
 %(den_factor_line)s
 C ----------
 C BEGIN CODE
 C ----------
-      NTRY=NTRY+1
+      IF (DO_TRY) THEN
+        CALL SMATRIX%(proc_prefix)s_SPLITORDERS_NTRY(P,ANS,DO_TRY,GOODHEL,T_IDENT)
+      ELSE
       DO I=0,NSQAMPSO
       	ANS(I) = 0D0	  
       ENDDO
       DO IHEL=1,NCOMB
-        IF (GOODHEL(IHEL) .OR. NTRY .LT. 2) THEN
-          IF (NTRY.LT.2) THEN
-C for the first ps-point, check for helicities that give
-C identical matrix elements
-            call MATRIX_%(proc_prefix)s(P ,NHEL(1,IHEL),T)            
-            DO I=0,NSQAMPSO
-                T_SAVE(IHEL,I)=T(I)
-            ENDDO
-            T_IDENT(IHEL)=-1
-            DO I=1,IHEL-1
-               IF (T(0).EQ.0D0) EXIT
-               IF (T_SAVE(I,0).EQ.0D0) CYCLE
-                do j = 0, nsqampso
-                  IF (ABS(T(j)/T_SAVE(I,j)-1D0) .GT. 1D-12) goto 444
-                enddo
-                T_IDENT(IHEL) = I
- 444            continue
-            ENDDO
-          ELSE
+        IF (GOODHEL(IHEL)) THEN
             IF (T_IDENT(IHEL).GT.0) THEN
 C if two helicity states are identical, dont recompute
             DO I=0,NSQAMPSO
@@ -225,14 +228,98 @@ C add to the sum of helicities
           IF (T(0) .NE. 0D0 .AND. .NOT. GOODHEL(IHEL)) THEN
             GOODHEL(IHEL)=.TRUE.
           ENDIF
-        ENDIF
       ENDDO
       DO I=1,NSQAMPSO			
         ANS(I)=ANS(I)/DBLE(IDEN)
         ANS(0)=ANS(0)+ANS(I)
       ENDDO
+      ENDIF
       END
        
+
+
+      SUBROUTINE SMATRIX%(proc_prefix)s_SPLITORDERS_NTRY(P,ANS,DO_TRY,GOODHEL,T_IDENT)
+C  
+%(info_lines)s
+C
+C Returns amplitude squared summed/avg over colors
+c and helicities
+c for the point in phase space P(0:3,NEXTERNAL)
+C  
+%(process_lines)s
+C  
+      IMPLICIT NONE
+C  
+C CONSTANTS
+C  
+      include 'nexternal.inc'
+      INTEGER     NCOMB         
+      PARAMETER ( NCOMB=%(ncomb)d)
+      INTEGER NSQAMPSO
+      PARAMETER (NSQAMPSO=%(nSqAmpSplitOrders)d)
+C  
+C ARGUMENTS 
+C  
+      REAL*8 P(0:3,NEXTERNAL),ANS(0:NSQAMPSO)
+C  
+C LOCAL VARIABLES 
+C  
+      INTEGER IHEL,IDEN,I,J,T_IDENT(NCOMB)
+      REAL*8 T(0:NSQAMPSO),T_SAVE(NCOMB,0:NSQAMPSO)
+      SAVE T_SAVE
+      INTEGER NHEL(NEXTERNAL,NCOMB)
+%(helicity_lines)s
+      LOGICAL GOODHEL(NCOMB), DO_TRY
+C      DATA GOODHEL/NCOMB*.FALSE./
+      INTEGER MAX_TRY
+      DATA MAX_TRY/1/
+      INTEGER NTRY
+      DATA NTRY/0/
+%(den_factor_line)s
+C ----------
+C BEGIN CODE
+C ----------
+      NTRY=NTRY+1
+      DO I=0,NSQAMPSO
+      	ANS(I) = 0D0	  
+      ENDDO
+      DO IHEL=1,NCOMB
+C for the first ps-point, check for helicities that give
+C identical matrix elements
+            call MATRIX_%(proc_prefix)s(P ,NHEL(1,IHEL),T)            
+            DO I=0,NSQAMPSO
+                T_SAVE(IHEL,I)=T(I)
+            ENDDO
+            T_IDENT(IHEL)=-1
+            DO I=1,IHEL-1
+               IF (T(0).EQ.0D0) EXIT
+               IF (T_SAVE(I,0).EQ.0D0) CYCLE
+                do j = 0, nsqampso
+                  IF (ABS(T(j)/T_SAVE(I,j)-1D0) .GT. 1D-12) goto 444
+                enddo
+                T_IDENT(IHEL) = I
+ 444            continue
+            ENDDO
+C add to the sum of helicities
+	  DO I=1,NSQAMPSO !keep loop from 1!!
+             ANS(I)=ANS(I)+T(I)
+	  ENDDO
+          IF (T(0) .NE. 0D0) THEN
+            GOODHEL(IHEL)=.TRUE.
+          ENDIF
+      ENDDO
+      DO I=1,NSQAMPSO			
+        ANS(I)=ANS(I)/DBLE(IDEN)
+        ANS(0)=ANS(0)+ANS(I)
+      ENDDO
+
+      IF (NTRY.GE.MAX_TRY) THEN
+            DO_TRY = .FALSE.
+      ENDIF
+
+      END
+       
+
 
       SUBROUTINE MATRIX_%(proc_prefix)s(P,NHEL,RES)
 C  

@@ -119,59 +119,7 @@ jamp2b(:,:) = 0.0
 jamp2b(0,0) = %(ncolor)d
 
 if (firsttime) then
- do i = 1, nsqampso
-C this is for the orders of the born to integrate
-  do j = 1, nsplitorders
-   if(GETORDPOWFROMINDEX_B(j, i) .gt. born_orders(j)) then
-    keep_order(i) = .false.
-    EXIT 
-   endif
-  enddo
-C  keep_order_born = keep_order
-
-C this is for the orders of the counterterms
-  do j = 1, nsplitorders
-  keep_order_cnt(j,i) = .true.
-   do k = 1, nsplitorders
-    if (j.eq.k) then
-     ord_subtract=2
-    else
-     ord_subtract=0
-    endif
-    if(GETORDPOWFROMINDEX_B(k, i) .gt. nlo_orders(k)-ord_subtract) then
-     keep_order_cnt(j,i) = .false.
-     EXIT 
-    endif
-   enddo
-  enddo
-
-  nord_integrated_born = 0
-  if (keep_order(i)) then
-   nord_integrated_born = nord_integrated_born + 1
-   !write(*,*) 'BORN: keeping split order ', i
-  !else
-   !write(*,*) 'BORN: not keeping split order ', i
-  endif
- enddo
- keep_order_born = keep_order
-
-C check that, if one include the sudakov corrections, there is at most one contribution to be integrated at LO
-if (has_ewsudakov.and.nord_integrated_born.gt.1) then
- write(*,*) 'ERROR in born.f, cannot compute Sudakov EW corrections with more than one Born coupling combination to be integrated.Found', nord_integrated_born
- stop 1
-endif
-
- do j = 1, nsplitorders
-  write(*,*) 'counterterm S.O', j, ordernames(j)
-  do i = 1, nsqampso
-   if (keep_order_cnt(j,i)) then
-    write(*,*) 'BORN: keeping split order', i
-   else
-    write(*,*) 'BORN: not keeping split order', i
-   endif
-  enddo
- enddo
- firsttime = .false.
+  call FIRSTTIME_SETUP(firsttime)
 endif
 
 CALL SBORN_SPLITORDERS(P,AMP2B,JAMP2B,ANS,ret_saveamp)
@@ -244,6 +192,99 @@ C AMP_SPLIT_CNT(:,:,:) = RET_AMP_SPLIT_CNT(:,:,:)
 END
 
 
+
+      SUBROUTINE FIRSTTIME_SETUP(firsttime)
+C  
+C CONSTANTS
+C 
+      implicit none
+      include 'nexternal.inc'
+      include 'has_ewsudakov.inc'
+      include 'orders.inc'
+      include 'born_nhel.inc'
+      INTEGER NAMPSO, NSQAMPSO
+      PARAMETER (NAMPSO=%(nAmpSplitOrders)d, NSQAMPSO=%(nSqAmpSplitOrders)d)
+C  
+C ARGUMENTS 
+C 
+
+C
+C VARIABLES
+C
+      INTEGER I,J,K
+      integer nord_integrated_born
+      LOGICAL KEEP_ORDER(NSQAMPSO), KEEP_ORDER_CNT(NSPLITORDERS, NSQAMPSO), FIRSTTIME
+      data keep_order / NSQAMPSO * .TRUE. /
+      logical keep_order_born(NSQAMPSO)
+      common /c_keep_order_B/ keep_order_born
+      common /c_keep_order_cnt/ keep_order_cnt 
+      integer ord_subtract
+
+C
+C     FUNCTIONS
+C
+      integer GETORDPOWFROMINDEX_B
+C
+C BEGIN CODE
+C
+
+
+ do i = 1, nsqampso
+C this is for the orders of the born to integrate
+  do j = 1, nsplitorders
+   if(GETORDPOWFROMINDEX_B(j, i) .gt. born_orders(j)) then
+    keep_order(i) = .false.
+    EXIT 
+   endif
+  enddo
+C  keep_order_born = keep_order
+
+C this is for the orders of the counterterms
+  do j = 1, nsplitorders
+  keep_order_cnt(j,i) = .true.
+   do k = 1, nsplitorders
+    if (j.eq.k) then
+     ord_subtract=2
+    else
+     ord_subtract=0
+    endif
+    if(GETORDPOWFROMINDEX_B(k, i) .gt. nlo_orders(k)-ord_subtract) then
+     keep_order_cnt(j,i) = .false.
+     EXIT 
+    endif
+   enddo
+  enddo
+
+  nord_integrated_born = 0
+  if (keep_order(i)) then
+   nord_integrated_born = nord_integrated_born + 1
+   !write(*,*) 'BORN: keeping split order ', i
+  !else
+   !write(*,*) 'BORN: not keeping split order ', i
+  endif
+ enddo
+ keep_order_born = keep_order
+
+C check that, if one include the sudakov corrections, there is at most one contribution to be integrated at LO
+if (has_ewsudakov.and.nord_integrated_born.gt.1) then
+ write(*,*) 'ERROR in born.f, cannot compute Sudakov EW corrections with more than one Born coupling combination to be integrated.Found', nord_integrated_born
+ stop 1
+endif
+
+ do j = 1, nsplitorders
+  write(*,*) 'counterterm S.O', j, ordernames(j)
+  do i = 1, nsqampso
+   if (keep_order_cnt(j,i)) then
+    write(*,*) 'BORN: keeping split order', i
+   else
+    write(*,*) 'BORN: not keeping split order', i
+   endif
+  enddo
+ enddo
+
+ firsttime = .false.
+
+ end
 
 
 
