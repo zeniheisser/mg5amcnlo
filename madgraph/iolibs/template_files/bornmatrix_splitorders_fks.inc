@@ -573,7 +573,7 @@ C
       REAL*8 borns(2,0:NSQAMPSO)
       COMPLEX*16 BORNTILDE
       integer max_try
-      data max_try /2/
+      data max_try /20/
       INTEGER NTRY(%(nconfs)d)
       DATA NTRY /%(nconfs)d*0/
       COMPLEX*16 T(2,NSQAMPSO)
@@ -667,7 +667,7 @@ C ----------
       ANS(2,0)=ANS(2,0)+ANS(2,I)
       ENDDO
       calculatedBorn=.true.
-      if(ntry(nFKSprocess).gt.max_try) then
+      if(ntry(nFKSprocess).ge.max_try) then
             DO_TRY=.FALSE.
       endif
       END

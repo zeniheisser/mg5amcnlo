@@ -190,7 +190,8 @@ C LOCAL VARIABLES
 C  
       INTEGER IHEL,IDEN,I,J,T_IDENT(NCOMB)
       REAL*8 T(0:NSQAMPSO),T_SAVE(NCOMB,0:NSQAMPSO)
-      SAVE T_SAVE,T_IDENT
+C      SAVE T_SAVE,T_IDENT
+      data t_ident/NCOMB*-1/
       INTEGER NHEL(NEXTERNAL,NCOMB)
 %(helicity_lines)s
       LOGICAL GOODHEL(NCOMB), DO_TRY
@@ -200,6 +201,8 @@ C
 C ----------
 C BEGIN CODE
 C ----------
+      T(:) = 0d0
+      T_SAVE(:,:) = 0d0 
       IF (DO_TRY) THEN
         CALL SMATRIX%(proc_prefix)s_SPLITORDERS_NTRY(P,ANS,DO_TRY,GOODHEL,T_IDENT)
       ELSE
@@ -207,6 +210,7 @@ C ----------
       	ANS(I) = 0D0	  
       ENDDO
       DO IHEL=1,NCOMB
+        T(:) = 0d0
         IF (GOODHEL(IHEL)) THEN
             IF (T_IDENT(IHEL).GT.0) THEN
 C if two helicity states are identical, dont recompute
@@ -225,9 +229,6 @@ C add to the sum of helicities
 	  DO I=1,NSQAMPSO !keep loop from 1!!
              ANS(I)=ANS(I)+T(I)
 	  ENDDO
-          IF (T(0) .NE. 0D0 .AND. .NOT. GOODHEL(IHEL)) THEN
-            GOODHEL(IHEL)=.TRUE.
-          ENDIF
       ENDDO
       DO I=1,NSQAMPSO			
         ANS(I)=ANS(I)/DBLE(IDEN)
@@ -235,7 +236,6 @@ C add to the sum of helicities
       ENDDO
       ENDIF
       END
-       
 
 
       SUBROUTINE SMATRIX%(proc_prefix)s_SPLITORDERS_NTRY(P,ANS,DO_TRY,GOODHEL,T_IDENT)
@@ -272,7 +272,7 @@ C
       LOGICAL GOODHEL(NCOMB), DO_TRY
 C      DATA GOODHEL/NCOMB*.FALSE./
       INTEGER MAX_TRY
-      DATA MAX_TRY/1/
+      DATA MAX_TRY/20/
       INTEGER NTRY
       DATA NTRY/0/
 %(den_factor_line)s
@@ -280,17 +280,19 @@ C ----------
 C BEGIN CODE
 C ----------
       NTRY=NTRY+1
+      T_SAVE(:,:) = 0d0
       DO I=0,NSQAMPSO
       	ANS(I) = 0D0	  
       ENDDO
       DO IHEL=1,NCOMB
+            T(:) = 0d0
 C for the first ps-point, check for helicities that give
 C identical matrix elements
             call MATRIX_%(proc_prefix)s(P ,NHEL(1,IHEL),T)            
             DO I=0,NSQAMPSO
                 T_SAVE(IHEL,I)=T(I)
             ENDDO
-            T_IDENT(IHEL)=-1
+C            T_IDENT(IHEL)=-1
             DO I=1,IHEL-1
                IF (T(0).EQ.0D0) EXIT
                IF (T_SAVE(I,0).EQ.0D0) CYCLE
