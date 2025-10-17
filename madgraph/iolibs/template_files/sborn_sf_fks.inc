@@ -17,7 +17,6 @@ C the charge-linked if it is a color singlet
           integer i,m,n 
       include 'orders.inc'
       COMPLEX*16 ANS_CNT(2, NSPLITORDERS)
-c      common /c_born_cnt/ ans_cnt
       LOGICAL KEEP_ORDER_CNT(NSPLITORDERS, NSQAMPSO)
       common /c_keep_order_cnt/ keep_order_cnt 
       double precision charges_born(nexternal-1)
@@ -27,7 +26,6 @@ c      common /c_born_cnt/ ans_cnt
       double precision pmass(nexternal), zero
       parameter (zero=0d0)
       double precision amp_split_soft(amp_split_size)
-C      common /to_amp_split_soft/amp_split_soft
       double complex ret_amp_split_cnt(amp_split_size,2,nsplitorders)
       double complex loc_saveamp(ngraphs,max_bhel)
 

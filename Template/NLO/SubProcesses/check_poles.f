@@ -72,6 +72,7 @@ cc
       double precision ret_amp_split(amp_split_size)
       double complex ret_amp_split_cnt(amp_split_size,2,nsplitorders)
       double complex ret_saveamp(ngraphs,max_bhel)
+      double precision amp_split_finite_ML(amp_split_size)
 
 C-----
 C  BEGIN CODE
@@ -229,7 +230,7 @@ c initialization
           ! extra initialisation calls: skip the first point
           ! as well as any other points which is used for initialization
           ! (according to the return code)
-          call BinothLHA(p_born, born, virt_wgt, ret_amp_split, ret_saveamp)
+          call BinothLHA(p_born, born, virt_wgt, ret_amp_split, ret_saveamp, amp_split_finite_ML)
           if (npointsChecked.eq.0) then
              if (mod(ret_code_ml,100)/10.eq.3 .or.
      &            mod(ret_code_ml,100)/10.eq.4) then

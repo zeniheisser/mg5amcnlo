@@ -55,7 +55,7 @@ c to the list of weights using the add_wgt subroutine
       end
 
 
-      subroutine compute_6to5flav_cnt()
+      subroutine compute_6to5flav_cnt(amp_split_6to5f,amp_split_6to5f_muf,amp_split_6to5f_mur)
 C This is the counterterm for the 6f->5f scheme change 
 C of parton distributions (e.g. NNPDF2.3). 
 C It is called in this function such that if is included
@@ -78,8 +78,8 @@ C in the LO cross section
       double precision amp_split_6to5f(amp_split_size),
      &                 amp_split_6to5f_muf(amp_split_size),
      &                 amp_split_6to5f_mur(amp_split_size)
-      common /to_amp_split_6to5f/ amp_split_6to5f, amp_split_6to5f_muf, 
-     &                            amp_split_6to5f_mur
+C      common /to_amp_split_6to5f/ amp_split_6to5f, amp_split_6to5f_muf, 
+C     &                            amp_split_6to5f_mur
       integer orders_to_amp_split_pos
       integer niglu
       save niglu
@@ -291,7 +291,7 @@ c   approximation
 
 
 
-      subroutine compute_alpha_cnt()
+      subroutine compute_alpha_cnt(amp_split_alpha,amp_split_alpha_muf,amp_split_alpha_mur)
 C This is the counterterm for the change of scheme
 C in the UV renormalisation for alpha in (leptonic) PDFs
 C wrt the hard matrix element. Relevant for lepton collisions. 
@@ -319,8 +319,8 @@ C in the LO cross section
       double precision amp_split_alpha(amp_split_size),
      &                 amp_split_alpha_muf(amp_split_size),
      &                 amp_split_alpha_mur(amp_split_size)
-      common /to_amp_split_alpha/ amp_split_alpha, amp_split_alpha_muf, 
-     &                            amp_split_alpha_mur
+C      common /to_amp_split_alpha/ amp_split_alpha, amp_split_alpha_muf, 
+C     &                            amp_split_alpha_mur
       integer orders_to_amp_split_pos
       integer i, j, k
       logical firsttime
@@ -464,29 +464,29 @@ c value to the list of weights using the add_wgt subroutine
       double precision amp_split_virt(amp_split_size),
      &     amp_split_born_for_virt(amp_split_size),
      &     amp_split_avv(amp_split_size)
-      common /to_amp_split_virt/amp_split_virt,
-     &                          amp_split_born_for_virt,
-     &                          amp_split_avv
+C      common /to_amp_split_virt/amp_split_virt,
+C     &                          amp_split_born_for_virt,
+C     &                          amp_split_avv
       double precision amp_split_wgtnstmp(amp_split_size),
      $                 amp_split_wgtwnstmpmuf(amp_split_size),
      $                 amp_split_wgtwnstmpmur(amp_split_size)
-      common /to_amp_split_bsv/amp_split_wgtnstmp,
-     $                         amp_split_wgtwnstmpmuf,
-     $                         amp_split_wgtwnstmpmur
+C      common /to_amp_split_bsv/amp_split_wgtnstmp,
+C     $                         amp_split_wgtwnstmpmuf,
+C     $                         amp_split_wgtwnstmpmur
 
       ! stuff for the 6->5 flav scheme
       double precision amp_split_6to5f(amp_split_size),
      &                 amp_split_6to5f_muf(amp_split_size),
      &                 amp_split_6to5f_mur(amp_split_size)
-      common /to_amp_split_6to5f/ amp_split_6to5f, amp_split_6to5f_muf, 
-     &                            amp_split_6to5f_mur
+C      common /to_amp_split_6to5f/ amp_split_6to5f, amp_split_6to5f_muf, 
+C     &                            amp_split_6to5f_mur
 
       ! stuff for the alpha UV-scheme in lepton collisions
       double precision amp_split_alpha(amp_split_size),
      &                 amp_split_alpha_muf(amp_split_size),
      &                 amp_split_alpha_mur(amp_split_size)
-      common /to_amp_split_alpha/ amp_split_alpha, amp_split_alpha_muf, 
-     &                            amp_split_alpha_mur
+C      common /to_amp_split_alpha/ amp_split_alpha, amp_split_alpha_muf, 
+C     &                            amp_split_alpha_mur
 
       double precision wgt6f1,wgt6f2,wgt6f3
       double precision wgtal1,wgtal2,wgtal3
@@ -514,7 +514,9 @@ c value to the list of weights using the add_wgt subroutine
       call cpu_time(tBefore)
       if (f_nb.eq.0d0) return
       if (xi_i_hat_ev*xiimax_cnt(0) .gt. xiBSVcut_used) return
-      call bornsoftvirtual(p1_cnt(0,1,0),bsv_wgt,virt_wgt,born_wgt)
+      call bornsoftvirtual(p1_cnt(0,1,0),bsv_wgt,virt_wgt,born_wgt
+     $     ,amp_split_virt,amp_split_born_for_virt,amp_split_avv
+     $     ,amp_split_wgtnstmp,amp_split_wgtwnstmpmuf,amp_split_wgtwnstmpmur)
       if (ickkw.eq.-1) then
          if (wgtbpower.ne.0) then
             write (*,*) 'ERROR in VETO XSec: bpower should'/
@@ -592,7 +594,7 @@ c and not be part of the plots nor computation of the cross section.
 
 C This is the counterterm for the 6f->5f scheme change 
 C of parton distributions (e.g. NNPDF2.3). 
-      call compute_6to5flav_cnt()
+      call compute_6to5flav_cnt(amp_split_6to5f,amp_split_6to5f_muf,amp_split_6to5f_mur)
       do iamp=1, amp_split_size
         if (amp_split_6to5f(iamp).eq.0d0.and.
      $      amp_split_6to5f_mur(iamp).eq.0d0.and.
@@ -613,7 +615,7 @@ C of parton distributions (e.g. NNPDF2.3).
 C This is the counterterm for the change of scheme
 C in the UV renormalisation for alpha in (leptonic) PDFs
 C wrt the hard matrix element. Relevant for lepton collisions. 
-      call compute_alpha_cnt()
+      call compute_alpha_cnt(amp_split_alpha,amp_split_alpha_muf,amp_split_alpha_mur)
       do iamp=1, amp_split_size
         if (amp_split_alpha(iamp).eq.0d0.and.
      $      amp_split_alpha_mur(iamp).eq.0d0.and.
@@ -6735,7 +6737,9 @@ c
       
 
 
-      subroutine bornsoftvirtual(p,bsv_wgt,virt_wgt,born_wgt)
+      subroutine bornsoftvirtual(p,bsv_wgt,virt_wgt,born_wgt
+     &           ,amp_split_virt,amp_split_born_for_virt,amp_split_avv
+     &           ,amp_split_wgtnstmp,amp_split_wgtwnstmpmuf,amp_split_wgtwnstmpmur)
       use extra_weights
       use mint_module
       implicit none
@@ -6844,9 +6848,6 @@ c For the MINT folding
       double precision ret_amp_split(amp_split_size)
       double complex ret_amp_split_cnt(amp_split_size,2,nsplitorders)
       double complex ret_saveamp(ngraphs,max_bhel)
-c      DOUBLE PRECISION DUMMY_AMP_SPLIT(AMP_SPLIT_SIZE)
-c      DOUBLE COMPLEX DUMMY_AMP_SPLIT_CNT(AMP_SPLIT_SIZE,2,NSPLITORDERS)
-c      common /c_born_cnt/ ans_cnt
       double precision oneo8pi2
       parameter(oneo8pi2 = 1d0/(8d0*pi**2))
       include 'nFKSconfigs.inc'
@@ -6864,21 +6865,21 @@ C to keep track of the various split orders
       double precision amp_split_bsv(amp_split_size)
       double precision amp_split_soft(amp_split_size)
       double precision amp_split_finite_ML(amp_split_size)
-      common /to_amp_split_finite/amp_split_finite_ML
+C      common /to_amp_split_finite/amp_split_finite_ML
       double precision amp_split_virt_save(amp_split_size)
       save amp_split_virt_save
       double precision amp_split_virt(amp_split_size),
      &      amp_split_born_for_virt(amp_split_size),
      &      amp_split_avv(amp_split_size)
-      common /to_amp_split_virt/amp_split_virt,
-     &                          amp_split_born_for_virt,
-     &                          amp_split_avv
+C      common /to_amp_split_virt/amp_split_virt,
+C     &                          amp_split_born_for_virt,
+C     &                          amp_split_avv
       double precision amp_split_wgtnstmp(amp_split_size),
      $                 amp_split_wgtwnstmpmuf(amp_split_size),
      $                 amp_split_wgtwnstmpmur(amp_split_size)
-      common /to_amp_split_bsv/amp_split_wgtnstmp,
-     $                         amp_split_wgtwnstmpmuf,
-     $                         amp_split_wgtwnstmpmur
+C      common /to_amp_split_bsv/amp_split_wgtnstmp,
+C     $                         amp_split_wgtwnstmpmuf,
+C     $                         amp_split_wgtwnstmpmur
       double precision coupl_wgtwnstmpmuf
 
       double precision amp_tot
@@ -7136,7 +7137,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
          if ((ran2().le.virtual_fraction(ichan) .and.
      $        abrv(1:3).ne.'nov').or.abrv(1:4).eq.'virt') then
             call cpu_time(tBefore)
-            Call BinothLHA(p_born,born_wgt,virt_wgt,ret_amp_split,ret_saveamp)
+            Call BinothLHA(p_born,born_wgt,virt_wgt,ret_amp_split,ret_saveamp,amp_split_finite_ML)
             do iamp=1,amp_split_size
                amp_split_virt(iamp)=amp_split_finite_ML(iamp)
             enddo

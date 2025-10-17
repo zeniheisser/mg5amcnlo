@@ -1,4 +1,4 @@
-      subroutine BinothLHA(p,born_wgt,virt_wgt,amp_split_born,loc_saveamp)
+      subroutine BinothLHA(p,born_wgt,virt_wgt,amp_split_born,loc_saveamp,amp_split_finite_ML)
 c
 c Given the Born momenta, this is the Binoth-Les Houches interface file
 c that calls the OLP and returns the virtual weights. For convenience
@@ -66,7 +66,7 @@ c statistics for MadLoop
       integer amp_orders(nsplitorders)
       integer split_amp_orders(nsplitorders), iamp
       double precision amp_split_finite_ML(amp_split_size)
-      common /to_amp_split_finite/amp_split_finite_ML
+C      common /to_amp_split_finite/amp_split_finite_ML
       double precision prec_found(amp_split_size)
       double precision amp_split_poles_ML(amp_split_size,2),
      $ amp_split_poles_FKS(amp_split_size,2)

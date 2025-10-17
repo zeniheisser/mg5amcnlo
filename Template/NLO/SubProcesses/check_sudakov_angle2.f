@@ -175,6 +175,7 @@ c, logfromLOip1
       double precision amp_split_local(amp_split_size)
       double complex amp_split_cnt_local(amp_split_size,2,nsplitorders)
       double complex ret_saveamp(ngraphs,max_bhel)
+      double precision amp_split_finite_ML(amp_split_size)
 
 C-----
 C  BEGIN CODE
@@ -648,7 +649,7 @@ c----------
           call sborn_amp(p_born, amp2, jamp2, amp_split_local, amp_split_cnt_local, born, ans_cnt_local,ret_saveamp)
           amp_split_born(:) = amp_split_local(:)
           call sudakov_wrapper(p_born,ret_saveamp)
-          call BinothLHA(p_born, born, virt_wgt,amp_split_local,ret_saveamp)
+          call BinothLHA(p_born, born, virt_wgt,amp_split_local,ret_saveamp,amp_split_finite_ML)
           USERHEL=-1
           call SLOOPMATRIX_THRES(p_born,virthel,1d-3,PREC_FOUND
      $ ,RET_CODE)

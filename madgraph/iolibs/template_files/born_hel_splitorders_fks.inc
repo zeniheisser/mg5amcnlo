@@ -1,4 +1,4 @@
-      SUBROUTINE SBORN_HEL(P,ANS_SUMMED,LOC_SAVEAMP)
+      SUBROUTINE SBORN_HEL(P,ANS_SUMMED,LOC_SAVEAMP,wgt_hel)
 C
 C     Return the sum of the split orders which are required in orders.inc (BORN_ORDERS)
 C     Also the values needed for the counterterms are stored in the C_BORN_CNT common block
@@ -23,9 +23,6 @@ C
       INTEGER I, J
       REAL*8 ANS(0:NSQAMPSO)
       DOUBLE PRECISION WGT_HEL(NSQAMPSO, MAX_BHEL)
-      COMMON/C_BORN_HEL_SPLIT/WGT_HEL
-      DOUBLE PRECISION WGT_HEL_SUMMED(MAX_BHEL)
-      COMMON/C_BORN_HEL/WGT_HEL_SUMMED
 C
 C     FUNCTIONS
 C
@@ -38,23 +35,17 @@ C of the fact that they satisfy or not the squared-orders constraints
 
 
 C look for orders which match the born order constraint 
-	  CALL SBORN_HEL_SPLITORDERS(P,ANS,LOC_SAVEAMP)
+	  CALL SBORN_HEL_SPLITORDERS(P,ANS,LOC_SAVEAMP,WGT_HEL)
 ans_summed = 0d0
-  DO J = 1, MAX_BHEL
-    WGT_HEL_SUMMED(J) = 0d0
-  ENDDO
   DO I = 1, NSQAMPSO
     ANS_SUMMED = ANS_SUMMED + ANS(I)
-    DO J = 1, MAX_BHEL
-        WGT_HEL_SUMMED(J) = WGT_HEL_SUMMED(J) + WGT_HEL(I,J)
-    ENDDO
   ENDDO
 
 return
 END
 
 
-    SUBROUTINE SBORN_HEL_SPLITORDERS(P1,ANS,LOC_SAVEAMP)
+    SUBROUTINE SBORN_HEL_SPLITORDERS(P1,ANS,LOC_SAVEAMP,WGT_HEL)
 C  
 %(info_lines)s
 C
@@ -101,7 +92,6 @@ C
       integer nfksprocess
       common/c_nfksprocess/nfksprocess
       double precision wgt_hel(NSQAMPSO, max_bhel)
-      COMMON/C_BORN_HEL_SPLIT/WGT_HEL
 C ----------
 C BEGIN CODE
 C ----------
@@ -234,7 +224,6 @@ double precision vol
 INTEGER NSQAMPSO
 PARAMETER (NSQAMPSO=%(nSqAmpSplitOrders)d)
 DOUBLE PRECISION WGT_HEL(NSQAMPSO, MAX_BHEL)
-COMMON/C_BORN_HEL_SPLIT/WGT_HEL
 double precision sum_hel(nsqampso)
 integer i, ihel
 
@@ -246,7 +235,7 @@ double complex loc_saveamp(%(ngraphs)d,max_bhel)
 
 double precision ran2
 
-call sborn_hel(p,born_wgt_recomp_direct,loc_saveamp)
+call sborn_hel(p,born_wgt_recomp_direct,loc_saveamp,wgt_hel)
 
 C Loop over the various orders of squared Feynman diagrams and compute for each order the sum
 n_nonzero_ord = 0

@@ -1,4 +1,4 @@
-      subroutine BinothLHA(pin,born_wgt,virt_wgt)
+      subroutine BinothLHA(pin,born_wgt,virt_wgt,amp_split_born,loc_saveamp,amp_split_finite)
 c
 c Given the Born momenta, this is the Binoth-Les Houches interface file
 c that calls the OLP and returns the virtual weights. For convenience
@@ -11,6 +11,8 @@ c
       include "nexternal.inc"
       include "coupl.inc"
       include "Binoth_proc.inc"
+      include 'orders.inc'
+      include 'born_nhel.inc'
       double precision pi
       parameter (pi=3.1415926535897932385d0)
       double precision pin(0:3,nexternal-1),p(0:4,nexternal-1)
@@ -35,6 +37,9 @@ c
       integer i,j
       double precision zero,pmass(nexternal)
       parameter (zero=0d0)
+      double precision amp_split_born(1:amp_split_size)
+      double precision amp_split_finite(amp_split_size)
+      double complex loc_saveamp(ngraphs,max_bhel)
       include 'pmass.inc'
       if (isum_hel.ne.0) then
          write (*,*) 'Can only do explicit helicity sum'//
