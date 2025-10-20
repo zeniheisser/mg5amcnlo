@@ -629,7 +629,7 @@ C wrt the hard matrix element. Relevant for lepton collisions.
       return
       end
 
-      subroutine compute_real_emission(p,sudakov_damp)
+      subroutine compute_real_emission(p,sudakov_damp,ret_amp_split,fx_ev)
 c This subroutine computes the real-emission matrix elements and adds
 c its value to the list of weights using the add_wgt subroutine
       use extra_weights
@@ -659,7 +659,7 @@ c its value to the list of weights using the add_wgt subroutine
       if (f_r.eq.0d0) return
       s_ev = fks_Sij(p,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
       if (s_ev.le.0.d0) return
-      call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx_ev,ret_amp_split)
+C      call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx_ev,ret_amp_split)
       do iamp=1, amp_split_size
         if (ret_amp_split(iamp).eq.0d0) cycle
         call amp_split_pos_to_orders(iamp, orders)
@@ -681,7 +681,7 @@ c its value to the list of weights using the add_wgt subroutine
       return
       end
 
-      subroutine compute_soft_counter_term(replace_MC_subt)
+      subroutine compute_soft_counter_term(replace_MC_subt,ret_amp_split,fx_s)
 c This subroutine computes the soft counter term and adds its value to
 c the list of weights using the add_wgt subroutine
       use extra_weights
@@ -725,7 +725,7 @@ c the list of weights using the add_wgt subroutine
      $     return
       s_s = fks_Sij(p1_cnt(0,1,0),i_fks,j_fks,zero,y_ij_fks_ev)
       if (s_s.le.0d0) return
-      call sreal(p1_cnt(0,1,0),0d0,y_ij_fks_ev,fx_s,ret_amp_split)
+C      call sreal(p1_cnt(0,1,0),0d0,y_ij_fks_ev,fx_s,ret_amp_split)
 
       do iamp=1, amp_split_size
         if (ret_amp_split(iamp).eq.0d0) cycle
@@ -754,7 +754,7 @@ c the list of weights using the add_wgt subroutine
       return
       end
 
-      subroutine compute_collinear_counter_term(replace_MC_subt)
+      subroutine compute_collinear_counter_term(replace_MC_subt,ret_amp_split,fx_c)
 c This subroutine computes the collinear counter term and adds its value
 c to the list of weights using the add_wgt subroutine
       use extra_weights
@@ -814,9 +814,9 @@ c to the list of weights using the add_wgt subroutine
       if (s_c.le.0d0) return
       ! sreal_deg should be called **BEFORE** sreal 
       ! in order not to overwrtie the amp_split array
-      call sreal_deg(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,deg_xi_c
-     $     ,deg_lxi_c)
-      call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fx_c,ret_amp_split)
+C      call sreal_deg(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,deg_xi_c
+C     $     ,deg_lxi_c)
+C      call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fx_c,ret_amp_split)
 
       do iamp=1, amp_split_size
         if (ret_amp_split(iamp).eq.0d0.and.
@@ -858,7 +858,7 @@ c to the list of weights using the add_wgt subroutine
       return
       end
 
-      subroutine compute_soft_collinear_counter_term(replace_MC_subt)
+      subroutine compute_soft_collinear_counter_term(replace_MC_subt, ret_amp_split,fx_sc)
 c This subroutine computes the soft-collinear counter term and adds its
 c value to the list of weights using the add_wgt subroutine
       use extra_weights
@@ -929,8 +929,8 @@ c value to the list of weights using the add_wgt subroutine
       if (s_sc.le.0d0) return
       ! sreal_deg should be called **BEFORE** sreal 
       ! in order not to overwrtie the amp_split array
-      call sreal_deg(p1_cnt(0,1,2),zero,one, deg_xi_sc,deg_lxi_sc)
-      call sreal(p1_cnt(0,1,2),zero,one,fx_sc,ret_amp_split)
+C      call sreal_deg(p1_cnt(0,1,2),zero,one, deg_xi_sc,deg_lxi_sc)
+C      call sreal(p1_cnt(0,1,2),zero,one,fx_sc,ret_amp_split)
 
       do iamp=1, amp_split_size
         if (ret_amp_split(iamp).eq.0d0.and.
@@ -5921,9 +5921,6 @@ c Particle types (=color/charges) of i_fks, j_fks and fks_mother
       double precision ret_amp_split(amp_split_size)
       double complex ret_amp_split_cnt(amp_split_size,2,nsplitorders)
       double complex ret_saveamp(ngraphs,max_bhel)
-c      DOUBLE PRECISION DUMMY_AMP_SPLIT(AMP_SPLIT_SIZE)
-c      DOUBLE COMPLEX DUMMY_AMP_SPLIT_CNT(AMP_SPLIT_SIZE,2,NSPLITORDERS)
-c      common /c_born_cnt/ ans_cnt
       logical split_type(nsplitorders) 
       common /c_split_type/split_type
       

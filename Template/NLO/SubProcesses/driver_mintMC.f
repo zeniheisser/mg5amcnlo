@@ -726,6 +726,18 @@ C Virtual variables
      $                 amp_split_wgtwnstmpmur(amp_split_size)
       double precision bsv_wgt,virt_wgt,born_wgt
 
+C Real variables
+      double precision zero, one
+      parameter (zero=0d0,one=1d0)
+      double precision real_amp_split(amp_split_size)
+      double precision fx_ev, fx_s, fx_c, fx_sc
+      double precision deg_xi_c, deg_lxi_c, deg_xi_sc, deg_lxi_sc
+      double precision    xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3)
+     $                    ,p_i_fks_cnt(0:3,-2:2)
+      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+      double precision   xi_i_fks_cnt(-2:2)
+      common /cxiifkscnt/xi_i_fks_cnt
+
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
 
@@ -909,13 +921,19 @@ c by the call to compute_MC_subt_term) through the 'replace_MC_subt'.
                call set_alphaS(p1_cnt(0,1,0))
                call include_multichannel_enhance(3)
                replace_MC_subt=(1d0-gfactsf)*probne
-               call compute_soft_counter_term(replace_MC_subt)
+               call sreal(p1_cnt(0,1,0),0d0,y_ij_fks_ev,fx_s,real_amp_split)
+               call compute_soft_counter_term(replace_MC_subt,real_amp_split,fx_s)
                call set_cms_stuff(ione)
                replace_MC_subt=(1d0-gfactcl)*(1d0-gfactsf)*probne
-               call compute_collinear_counter_term(replace_MC_subt)
+               call sreal_deg(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,deg_xi_c
+     $                       ,deg_lxi_c)
+               call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fx_c,real_amp_split)
+               call compute_collinear_counter_term(replace_MC_subt,real_amp_split,fx_c)
                call set_cms_stuff(itwo)
                replace_MC_subt=(1d0-gfactcl)*(1d0-gfactsf)*probne
-               call compute_soft_collinear_counter_term(replace_MC_subt)
+               call sreal_deg(p1_cnt(0,1,2),zero,one, deg_xi_sc,deg_lxi_sc)
+               call sreal(p1_cnt(0,1,2),zero,one,fx_sc,real_amp_split)         
+               call compute_soft_collinear_counter_term(replace_MC_subt,real_amp_split,fx_sc)
             endif
 c Include the real-emission contribution.
             if (passcuts_n1body) then
@@ -925,7 +943,8 @@ c Include the real-emission contribution.
                call set_alphaS(p)
                call include_multichannel_enhance(2)
                sudakov_damp=probne
-               call compute_real_emission(p,sudakov_damp)
+               call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx_ev,real_amp_split)
+               call compute_real_emission(p,sudakov_damp,real_amp_split,fx_ev)
             endif
 c Update the shower starting scale with the shape from the MC
 c subtraction terms.

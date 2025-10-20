@@ -398,6 +398,18 @@ C Virtual variables
      $                 amp_split_wgtwnstmpmur(amp_split_size)
       double precision bsv_wgt,virt_wgt,born_wgt
 
+C Real variables
+      double precision zero, one
+      parameter (zero=0d0,one=1d0)
+      double precision real_amp_split(amp_split_size)
+      double precision fx_ev, fx_s, fx_c, fx_sc
+      double precision deg_xi_c, deg_lxi_c, deg_xi_sc, deg_lxi_sc
+      double precision    xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3)
+     $                    ,p_i_fks_cnt(0:3,-2:2)
+      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+      double precision   xi_i_fks_cnt(-2:2)
+      common /cxiifkscnt/xi_i_fks_cnt
+
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
 
@@ -523,21 +535,28 @@ c         wgt_me_real=0d0
             call set_cms_stuff(izero)
             call set_alphaS(p1_cnt(0,1,0))
             call include_multichannel_enhance(3)
-            call compute_soft_counter_term(0d0)
+            call sreal(p1_cnt(0,1,0),0d0,y_ij_fks_ev,fx_s,real_amp_split)
+            call compute_soft_counter_term(0d0,real_amp_split,fx_s)
             call set_cms_stuff(itwo)
-            call compute_soft_collinear_counter_term(0d0)
+            call sreal_deg(p1_cnt(0,1,2),zero,one, deg_xi_sc,deg_lxi_sc)
+            call sreal(p1_cnt(0,1,2),zero,one,fx_sc,real_amp_split)
+            call compute_soft_collinear_counter_term(0d0,real_amp_split,fx_sc)
          endif
          if (passcuts_coll .and. abrv.ne.'real') then
            call set_alphaS(p1_cnt(0,1,1))
            call set_cms_stuff(ione)
-           call compute_collinear_counter_term(0d0)
+           call sreal_deg(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,deg_xi_c
+     $                   ,deg_lxi_c)
+           call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fx_c,real_amp_split)
+           call compute_collinear_counter_term(0d0,real_amp_split,fx_c)
          endif
          if (passcuts_n1body) then
             pass_cuts_check=.true.
             call set_cms_stuff(mohdr)
             call set_alphaS(p)
             call include_multichannel_enhance(2)
-            call compute_real_emission(p,1d0)
+            call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx_ev,real_amp_split)
+            call compute_real_emission(p,1d0,real_amp_split,fx_ev)
          endif
       enddo
       
