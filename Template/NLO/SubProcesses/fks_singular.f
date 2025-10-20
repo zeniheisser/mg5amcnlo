@@ -1,4 +1,4 @@
-      subroutine compute_born
+      subroutine compute_born(p_born,ret_amp2,ret_jamp2,ret_amp_split,ret_amp_split_cnt,wgt_c,ret_ans_cnt,ret_saveamp)
 c This subroutine computes the Born matrix elements and adds its value
 c to the list of weights using the add_wgt subroutine
       use extra_weights
@@ -22,7 +22,7 @@ c to the list of weights using the add_wgt subroutine
       double precision wgt_c
       double precision wgt1
       double precision p_born(0:3,nexternal-1)
-      common /pborn/   p_born
+C      common /pborn/   p_born
       double precision   xiimax_cnt(-2:2)
       common /cxiimaxcnt/xiimax_cnt
       double precision  xi_i_hat_ev,xi_i_hat_cnt(-2:2)
@@ -36,7 +36,7 @@ c to the list of weights using the add_wgt subroutine
       call cpu_time(tBefore)
       if (f_b.eq.0d0) return
       if (xi_i_hat_ev*xiimax_cnt(0) .gt. xiBSVcut_used) return
-      call sborn_amp(p_born,ret_amp2,ret_jamp2,ret_amp_split,ret_amp_split_cnt,wgt_c,ret_ans_cnt,ret_saveamp)
+C      call sborn_amp(p_born,ret_amp2,ret_jamp2,ret_amp_split,ret_amp_split_cnt,wgt_c,ret_ans_cnt,ret_saveamp)
       do iamp=1, amp_split_size
         if (ret_amp_split(iamp).eq.0d0) cycle
         call amp_split_pos_to_orders(iamp, orders)
@@ -78,8 +78,6 @@ C in the LO cross section
       double precision amp_split_6to5f(amp_split_size),
      &                 amp_split_6to5f_muf(amp_split_size),
      &                 amp_split_6to5f_mur(amp_split_size)
-C      common /to_amp_split_6to5f/ amp_split_6to5f, amp_split_6to5f_muf, 
-C     &                            amp_split_6to5f_mur
       integer orders_to_amp_split_pos
       integer niglu
       save niglu
@@ -164,7 +162,7 @@ c      call sborn(p_born,wgtborn)
       end
 
 
-      subroutine compute_ewsudakov
+      subroutine compute_ewsudakov(p_born,ret_amp2,ret_jamp2,ret_amp_split,ret_amp_split_cnt,wgt_c,ret_ans_cnt,ret_saveamp)
 c This subroutine computes the NLO EW corrections in the Sudakov
 c   approximation
       use extra_weights
@@ -184,11 +182,12 @@ c   approximation
       double precision ret_amp_split(amp_split_size)
       double complex ret_amp_split_cnt(amp_split_size,2,nsplitorders)
       double complex ret_saveamp(ngraphs,max_bhel)
+      double complex loc_saveamp(ngraphs,max_bhel)
 
       double precision wgt_c
       double precision wgt1
       double precision p_born(0:3,nexternal-1)
-      common /pborn/   p_born
+C      common /pborn/   p_born
       double precision   xiimax_cnt(-2:2)
       common /cxiimaxcnt/xiimax_cnt
       double precision  xi_i_hat_ev,xi_i_hat_cnt(-2:2)
@@ -231,7 +230,8 @@ c   approximation
       ! sud_mod = 0
       do sud_mod = 0,1
 
-       call sborn_amp(p_born,ret_amp2,ret_jamp2,ret_amp_split,ret_amp_split_cnt,wgt_c,ret_ans_cnt,ret_saveamp)
+C       call sborn_amp(p_born,ret_amp2,ret_jamp2,ret_amp_split,ret_amp_split_cnt,wgt_c,ret_ans_cnt,ret_saveamp)
+       loc_saveamp(:,:) = ret_saveamp(:,:)
        call sudakov_wrapper(p_born, ret_saveamp)
        do iamp=1, amp_split_size
         if (amp_split_ewsud_lsc(iamp).eq.0d0.and.
@@ -319,8 +319,6 @@ C in the LO cross section
       double precision amp_split_alpha(amp_split_size),
      &                 amp_split_alpha_muf(amp_split_size),
      &                 amp_split_alpha_mur(amp_split_size)
-C      common /to_amp_split_alpha/ amp_split_alpha, amp_split_alpha_muf, 
-C     &                            amp_split_alpha_mur
       integer orders_to_amp_split_pos
       integer i, j, k
       logical firsttime
@@ -448,7 +446,9 @@ c     wgt3 : coefficient of the weight multiplying the log[mu_F^2/Q^2]
 
 
 
-      subroutine compute_nbody_noborn
+      subroutine compute_nbody_noborn(p,bsv_wgt,virt_wgt,born_wgt
+     &           ,amp_split_virt,amp_split_born_for_virt,amp_split_avv
+     &           ,amp_split_wgtnstmp,amp_split_wgtwnstmpmuf,amp_split_wgtwnstmpmur)
 c This subroutine computes the soft-virtual matrix elements and adds its
 c value to the list of weights using the add_wgt subroutine
       use extra_weights
@@ -464,29 +464,19 @@ c value to the list of weights using the add_wgt subroutine
       double precision amp_split_virt(amp_split_size),
      &     amp_split_born_for_virt(amp_split_size),
      &     amp_split_avv(amp_split_size)
-C      common /to_amp_split_virt/amp_split_virt,
-C     &                          amp_split_born_for_virt,
-C     &                          amp_split_avv
       double precision amp_split_wgtnstmp(amp_split_size),
      $                 amp_split_wgtwnstmpmuf(amp_split_size),
      $                 amp_split_wgtwnstmpmur(amp_split_size)
-C      common /to_amp_split_bsv/amp_split_wgtnstmp,
-C     $                         amp_split_wgtwnstmpmuf,
-C     $                         amp_split_wgtwnstmpmur
 
       ! stuff for the 6->5 flav scheme
       double precision amp_split_6to5f(amp_split_size),
      &                 amp_split_6to5f_muf(amp_split_size),
      &                 amp_split_6to5f_mur(amp_split_size)
-C      common /to_amp_split_6to5f/ amp_split_6to5f, amp_split_6to5f_muf, 
-C     &                            amp_split_6to5f_mur
 
       ! stuff for the alpha UV-scheme in lepton collisions
       double precision amp_split_alpha(amp_split_size),
      &                 amp_split_alpha_muf(amp_split_size),
      &                 amp_split_alpha_mur(amp_split_size)
-C      common /to_amp_split_alpha/ amp_split_alpha, amp_split_alpha_muf, 
-C     &                            amp_split_alpha_mur
 
       double precision wgt6f1,wgt6f2,wgt6f3
       double precision wgtal1,wgtal2,wgtal3
@@ -494,9 +484,10 @@ C     &                            amp_split_alpha_mur
       double precision wgt1,wgt2,wgt3,bsv_wgt,virt_wgt,born_wgt,pi,g2
      &     ,g22,wgt4
       parameter (pi=3.1415926535897932385d0)
-      double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
-     $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
-      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+      double precision p(0:3,nexternal)
+   !    double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
+   !   $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
+   !    common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
       double precision   xiimax_cnt(-2:2)
       common /cxiimaxcnt/xiimax_cnt
       double precision  xi_i_hat_ev,xi_i_hat_cnt(-2:2)
@@ -514,9 +505,9 @@ C     &                            amp_split_alpha_mur
       call cpu_time(tBefore)
       if (f_nb.eq.0d0) return
       if (xi_i_hat_ev*xiimax_cnt(0) .gt. xiBSVcut_used) return
-      call bornsoftvirtual(p1_cnt(0,1,0),bsv_wgt,virt_wgt,born_wgt
-     $     ,amp_split_virt,amp_split_born_for_virt,amp_split_avv
-     $     ,amp_split_wgtnstmp,amp_split_wgtwnstmpmuf,amp_split_wgtwnstmpmur)
+   !    call bornsoftvirtual(p1_cnt(0,1,0),bsv_wgt,virt_wgt,born_wgt
+   !   $     ,amp_split_virt,amp_split_born_for_virt,amp_split_avv
+   !   $     ,amp_split_wgtnstmp,amp_split_wgtwnstmpmuf,amp_split_wgtwnstmpmur)
       if (ickkw.eq.-1) then
          if (wgtbpower.ne.0) then
             write (*,*) 'ERROR in VETO XSec: bpower should'/
@@ -1177,7 +1168,7 @@ c Check if they are equal
       momenta_equal_uborn=momenta_equal(pb1,pb2)
       end
       
-      subroutine set_FxFx_scale(iterm,p)
+      subroutine set_FxFx_scale(iterm,p,nFKSprocess)
 c Sets the FxFx cluster scale and multiplies the f_* factors (computed
 c by 'compute_prefactors_nbody' and 'compute_prefactors_n1body') by the
 c Sudakov suppression. If called more than once with the same momenta
@@ -1225,7 +1216,7 @@ c     iterm= -3 : only restore scales for n+1-body w/o recomputing
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       INTEGER              NFKSPROCESS
-      COMMON/C_NFKSPROCESS/NFKSPROCESS
+C      COMMON/C_NFKSPROCESS/NFKSPROCESS
       save rewgt_mohdr_calculated,rewgt_izero_calculated,p_last_izero
      &     ,p_last_mohdr,iterm_last_izero,iterm_last_mohdr
      &     ,fxfx_ren_scales_izero ,fxfx_ren_scales_mohdr
@@ -6865,21 +6856,14 @@ C to keep track of the various split orders
       double precision amp_split_bsv(amp_split_size)
       double precision amp_split_soft(amp_split_size)
       double precision amp_split_finite_ML(amp_split_size)
-C      common /to_amp_split_finite/amp_split_finite_ML
       double precision amp_split_virt_save(amp_split_size)
       save amp_split_virt_save
       double precision amp_split_virt(amp_split_size),
      &      amp_split_born_for_virt(amp_split_size),
      &      amp_split_avv(amp_split_size)
-C      common /to_amp_split_virt/amp_split_virt,
-C     &                          amp_split_born_for_virt,
-C     &                          amp_split_avv
       double precision amp_split_wgtnstmp(amp_split_size),
      $                 amp_split_wgtwnstmpmuf(amp_split_size),
      $                 amp_split_wgtwnstmpmur(amp_split_size)
-C      common /to_amp_split_bsv/amp_split_wgtnstmp,
-C     $                         amp_split_wgtwnstmpmuf,
-C     $                         amp_split_wgtwnstmpmur
       double precision coupl_wgtwnstmpmuf
 
       double precision amp_tot

@@ -342,6 +342,8 @@ c timing statistics
       include 'run.inc'
       include 'orders.inc'
       include 'fks_info.inc'
+      include 'genps.inc'
+      include 'born_nhel.inc'
       double precision xx(ndimmax),vegas_wgt,f(nintegrals),jac,p(0:3
      $     ,nexternal),rwgt,vol,sig,x(99),MC_int_wgt
       integer ifl,nFKS_born,nFKS_picked,iFKS,nFKS_min,iamp
@@ -379,6 +381,26 @@ c      common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
       save ini_fin_fks_map
       include 'has_ewsudakov.inc'
 
+C Born variables
+      double precision born_amp2(ngraphs), born_jamp2(0:ncolor)
+      complex*16 born_ans_cnt(2,nsplitorders)
+      double precision born_amp_split(amp_split_size)
+      double complex born_amp_split_cnt(amp_split_size,2,nsplitorders)
+      double complex born_saveamp(ngraphs,max_bhel)
+      double precision wgt_born
+
+C Virtual variables
+      double precision amp_split_virt(amp_split_size),
+     &     amp_split_born_for_virt(amp_split_size),
+     &     amp_split_avv(amp_split_size)
+      double precision amp_split_wgtnstmp(amp_split_size),
+     $                 amp_split_wgtwnstmpmuf(amp_split_size),
+     $                 amp_split_wgtwnstmpmur(amp_split_size)
+      double precision bsv_wgt,virt_wgt,born_wgt
+
+      integer              nFKSprocess
+      common/c_nFKSprocess/nFKSprocess
+
       logical use_evpr, passcuts_coll
       common /to_use_evpr/use_evpr
 
@@ -414,7 +436,7 @@ c      common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
 c      wgt_me_born=0d0
 c      wgt_me_real=0d0
       if (ickkw.eq.-1) H1_factor_virt=0d0
-      if (ickkw.eq.3) call set_FxFx_scale(0,p)
+      if (ickkw.eq.3) call set_FxFx_scale(0,p,nFKSprocess)
       call update_vegas_x(xx,x)
       call get_MC_integer(max(ini_fin_fks(ichan),1)
      $     ,ini_fin_fks_map(ini_fin_fks(ichan),0),iran_picked,vol)
@@ -435,18 +457,25 @@ c The nbody contributions
       if (p_born(0,1).lt.0d0) goto 12
       call compute_prefactors_nbody(vegas_wgt)
       call set_cms_stuff(izero)
-      if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0))
+      if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0),nFKSprocess)
       passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
       if (passcuts_nbody) then
          pass_cuts_check=.true.
          call set_alphaS(p1_cnt(0,1,0))
          call include_multichannel_enhance(1)
+         call sborn_amp(p_born,born_amp2,born_jamp2,born_amp_split,born_amp_split_cnt,wgt_born,born_ans_cnt,born_saveamp)
          if (abrv(1:2).ne.'vi') then
-            call compute_born
-            if(abrv.ne.'born'.and.abrv.ne.'bovi') call compute_ewsudakov
+            call compute_born(p_born,born_amp2,born_jamp2,born_amp_split,born_amp_split_cnt,wgt_born,born_ans_cnt,born_saveamp)
+            if(abrv.ne.'born'.and.abrv.ne.'bovi') call compute_ewsudakov(p_born,born_amp2,born_jamp2,born_amp_split
+     $                                                 ,born_amp_split_cnt,wgt_born,born_ans_cnt,born_saveamp)
          endif
          if (abrv.ne.'born'.and.abrv.ne.'bosk') then
-            call compute_nbody_noborn
+            call bornsoftvirtual(p1_cnt(0,1,0),bsv_wgt,virt_wgt,born_wgt
+     $     ,amp_split_virt,amp_split_born_for_virt,amp_split_avv
+     $     ,amp_split_wgtnstmp,amp_split_wgtwnstmpmuf,amp_split_wgtwnstmpmur)
+            call compute_nbody_noborn(p1_cnt(0,1,0),bsv_wgt,virt_wgt,born_wgt
+     $     ,amp_split_virt,amp_split_born_for_virt,amp_split_avv
+     $     ,amp_split_wgtnstmp,amp_split_wgtwnstmpmuf,amp_split_wgtwnstmpmur)
          endif
       endif
 
@@ -481,13 +510,13 @@ c         wgt_me_real=0d0
          if (p_born(0,1).lt.0d0) cycle
          call compute_prefactors_n1body(vegas_wgt,jac)
          call set_cms_stuff(izero)
-         if (ickkw.eq.3) call set_FxFx_scale(2,p1_cnt(0,1,0))
+         if (ickkw.eq.3) call set_FxFx_scale(2,p1_cnt(0,1,0),nFKSprocess)
          passcuts_nbody =passcuts(p1_cnt(0,1,0),rwgt)
          ! needed for the mapping without event projection
          call set_cms_stuff(ione)
          passcuts_coll =(use_evpr.and.passcuts_nbody).or.passcuts(p1_cnt(0,1,1),rwgt)
          call set_cms_stuff(mohdr)
-         if (ickkw.eq.3) call set_FxFx_scale(3,p)
+         if (ickkw.eq.3) call set_FxFx_scale(3,p,nFKSprocess)
          passcuts_n1body=passcuts(p,rwgt)
          if (passcuts_nbody .and. abrv.ne.'real') then
             pass_cuts_check=.true.
