@@ -685,6 +685,10 @@ c
       data firsttime/.true./
       double precision p_born(0:3,nexternal-1)
       common /pborn/   p_born
+      
+      double precision p_born_coll(0:3,nexternal-1)
+      common/pborn_coll/p_born_coll
+
       integer     fold,ifold_counter
       common /cfl/fold,ifold_counter
       logical calculatedBorn
@@ -737,9 +741,24 @@ C Real variables
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
       double precision   xi_i_fks_cnt(-2:2)
       common /cxiifkscnt/xi_i_fks_cnt
+C Real deg amplitudes
+      double precision amp_split_collrem_xi(amp_split_size), 
+     $                 amp_split_collrem_lxi(amp_split_size),
+     $                 amp_split_wgtdegrem_xi(amp_split_size),
+     $                 amp_split_wgtdegrem_lxi(amp_split_size),
+     $                 amp_split_wgtdegrem_muF(amp_split_size)
+      double precision amp_split_wgtpsch_p(amp_split_size),
+     $                 amp_split_wgtpsch_l(amp_split_size),
+     $                 amp_split_wgtpsch_d(amp_split_size)
+      double precision p_born_used(0:3,nexternal-1)
+
+      logical storeCalculatedBorn
 
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
+
+      logical use_evpr, passcuts_coll
+      common /to_use_evpr/use_evpr
 
 c
       if (new_point .and. ifl.ne.2) then
@@ -923,17 +942,40 @@ c by the call to compute_MC_subt_term) through the 'replace_MC_subt'.
                replace_MC_subt=(1d0-gfactsf)*probne
                call sreal(p1_cnt(0,1,0),0d0,y_ij_fks_ev,fx_s,real_amp_split)
                call compute_soft_counter_term(replace_MC_subt,real_amp_split,fx_s)
-               call set_cms_stuff(ione)
-               replace_MC_subt=(1d0-gfactcl)*(1d0-gfactsf)*probne
-               call sreal_deg(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,deg_xi_c
-     $                       ,deg_lxi_c)
-               call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fx_c,real_amp_split)
-               call compute_collinear_counter_term(replace_MC_subt,real_amp_split,fx_c)
                call set_cms_stuff(itwo)
                replace_MC_subt=(1d0-gfactcl)*(1d0-gfactsf)*probne
-               call sreal_deg(p1_cnt(0,1,2),zero,one, deg_xi_sc,deg_lxi_sc)
+               storeCalculatedBorn=calculatedBorn
+               p_born_used(:,:) = p_born(:,:)
+               calculatedBorn=.false.
+               call sborn_amp(p_born_used,born_amp2,born_jamp2,born_amp_split
+     $                    ,born_amp_split_cnt,wgt_born,born_ans_cnt,born_saveamp)
+               calculatedBorn=storeCalculatedBorn
+               call sreal_deg(p1_cnt(0,1,2),zero,one, deg_xi_sc,deg_lxi_sc,
+     $    amp_split_wgtdegrem_xi,amp_split_wgtdegrem_lxi,amp_split_wgtdegrem_muF,
+     $    amp_split_wgtpsch_p, amp_split_wgtpsch_l, amp_split_wgtpsch_d,
+     $    born_ans_cnt,born_amp_split_cnt)
                call sreal(p1_cnt(0,1,2),zero,one,fx_sc,real_amp_split)         
-               call compute_soft_collinear_counter_term(replace_MC_subt,real_amp_split,fx_sc)
+               call compute_soft_collinear_counter_term(replace_MC_subt,real_amp_split,fx_sc,
+     &    amp_split_wgtdegrem_xi, amp_split_wgtdegrem_lxi, amp_split_wgtdegrem_muF,
+     &    amp_split_wgtpsch_p, amp_split_wgtpsch_l,amp_split_wgtpsch_d)
+               call set_cms_stuff(ione)
+               replace_MC_subt=(1d0-gfactcl)*(1d0-gfactsf)*probne
+               if(xi_i_fks_cnt(1).gt.0d0.and..not.use_evpr) then
+                 storeCalculatedBorn=calculatedBorn
+                 p_born_used(:,:) = p_born_coll(:,:)
+                 calculatedBorn=.false.
+                 call sborn_amp(p_born_used,born_amp2,born_jamp2,born_amp_split
+     $                    ,born_amp_split_cnt,wgt_born,born_ans_cnt,born_saveamp)
+                 calculatedBorn=storeCalculatedBorn
+               endif
+               call sreal_deg(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,deg_xi_c,deg_lxi_c,
+     $    amp_split_wgtdegrem_xi,amp_split_wgtdegrem_lxi,amp_split_wgtdegrem_muF,
+     $    amp_split_wgtpsch_p, amp_split_wgtpsch_l, amp_split_wgtpsch_d,
+     $    born_ans_cnt,born_amp_split_cnt)
+               call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fx_c,real_amp_split)
+               call compute_collinear_counter_term(replace_MC_subt,real_amp_split,fx_c,
+     &    amp_split_wgtdegrem_xi,amp_split_wgtdegrem_lxi,amp_split_wgtdegrem_muF,
+     &    amp_split_wgtpsch_p, amp_split_wgtpsch_l, amp_split_wgtpsch_d)
             endif
 c Include the real-emission contribution.
             if (passcuts_n1body) then

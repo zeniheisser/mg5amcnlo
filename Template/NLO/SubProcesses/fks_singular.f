@@ -754,7 +754,11 @@ C      call sreal(p1_cnt(0,1,0),0d0,y_ij_fks_ev,fx_s,ret_amp_split)
       return
       end
 
-      subroutine compute_collinear_counter_term(replace_MC_subt,ret_amp_split,fx_c)
+      subroutine compute_collinear_counter_term(replace_MC_subt,ret_amp_split,fx_c,
+     &    amp_split_wgtdegrem_xi,amp_split_wgtdegrem_lxi,
+     &    amp_split_wgtdegrem_muF,
+     &    amp_split_wgtpsch_p, amp_split_wgtpsch_l,
+     &    amp_split_wgtpsch_d)
 c This subroutine computes the collinear counter term and adds its value
 c to the list of weights using the add_wgt subroutine
       use extra_weights
@@ -772,16 +776,16 @@ c to the list of weights using the add_wgt subroutine
       double precision amp_split_wgtdegrem_xi(amp_split_size),
      $                 amp_split_wgtdegrem_lxi(amp_split_size),
      $                 amp_split_wgtdegrem_muF(amp_split_size)
-      common /to_amp_split_deg/amp_split_wgtdegrem_xi,
-     $                         amp_split_wgtdegrem_lxi,
-     $                         amp_split_wgtdegrem_muF
+   !    common /to_amp_split_deg/amp_split_wgtdegrem_xi,
+   !   $                         amp_split_wgtdegrem_lxi,
+   !   $                         amp_split_wgtdegrem_muF
       ! amp_split for the PDF scheme
       double precision amp_split_wgtpsch_p(amp_split_size),
      $                 amp_split_wgtpsch_l(amp_split_size),
      $                 amp_split_wgtpsch_d(amp_split_size)
-      common /to_amp_split_dis/amp_split_wgtpsch_p,
-     $                         amp_split_wgtpsch_l,
-     $                         amp_split_wgtpsch_d
+   !    common /to_amp_split_dis/amp_split_wgtpsch_p,
+   !   $                         amp_split_wgtpsch_l,
+   !   $                         amp_split_wgtpsch_d
       double precision zero,one,s_c,fks_Sij,fx_c,deg_xi_c,deg_lxi_c,wgt1
      &     ,wgt3,g22,replace_MC_subt
       external fks_Sij
@@ -858,7 +862,11 @@ C      call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fx_c,ret_amp_split)
       return
       end
 
-      subroutine compute_soft_collinear_counter_term(replace_MC_subt, ret_amp_split,fx_sc)
+      subroutine compute_soft_collinear_counter_term(replace_MC_subt, ret_amp_split,fx_sc,
+     #    amp_split_wgtdegrem_xi,amp_split_wgtdegrem_lxi,
+     #    amp_split_wgtdegrem_muF,
+     #    amp_split_wgtpsch_p, amp_split_wgtpsch_l,
+     #    amp_split_wgtpsch_d)
 c This subroutine computes the soft-collinear counter term and adds its
 c value to the list of weights using the add_wgt subroutine
       use extra_weights
@@ -876,16 +884,16 @@ c value to the list of weights using the add_wgt subroutine
       double precision amp_split_wgtdegrem_xi(amp_split_size),
      $                 amp_split_wgtdegrem_lxi(amp_split_size),
      $                 amp_split_wgtdegrem_muF(amp_split_size)
-      common /to_amp_split_deg/amp_split_wgtdegrem_xi,
-     $                         amp_split_wgtdegrem_lxi,
-     $                         amp_split_wgtdegrem_muF
+   !    common /to_amp_split_deg/amp_split_wgtdegrem_xi,
+   !   $                         amp_split_wgtdegrem_lxi,
+   !   $                         amp_split_wgtdegrem_muF
       ! amp_split for the PDF scheme
       double precision amp_split_wgtpsch_p(amp_split_size),
      $                 amp_split_wgtpsch_l(amp_split_size),
      $                 amp_split_wgtpsch_d(amp_split_size)
-      common /to_amp_split_dis/amp_split_wgtpsch_p,
-     $                         amp_split_wgtpsch_l,
-     $                         amp_split_wgtpsch_d
+   !    common /to_amp_split_dis/amp_split_wgtpsch_p,
+   !   $                         amp_split_wgtpsch_l,
+   !   $                         amp_split_wgtpsch_d
       double precision zero,one,s_sc,fks_Sij,fx_sc,wgt1,wgt3,deg_xi_sc
      $     ,deg_lxi_sc,g22,replace_MC_subt
       external fks_Sij
@@ -4660,6 +4668,7 @@ c Born and multiplies with the AP splitting function or eikonal factors.
       include "coupl.inc"
       include 'orders.inc'
       include 'genps.inc'
+      include 'born_nhel.inc'
 
       double precision pp(0:3,nexternal),wgt
       double precision xi_i_fks,y_ij_fks
@@ -4684,8 +4693,16 @@ c Born and multiplies with the AP splitting function or eikonal factors.
       logical need_color_links, need_charge_links
       common /c_need_links/need_color_links, need_charge_links
 
+      double precision amp2(ngraphs), jamp2(0:ncolor)
+      complex*16 ans_cnt(2, nsplitorders)
+      double complex ret_amp_split_cnt(amp_split_size,2,nsplitorders)
+      double complex ret_saveamp(ngraphs,max_bhel)
+      double precision p_born(0:3,nexternal-1)
+      common/pborn/p_born
+
       double precision pmass(nexternal)
       include "pmass.inc"
+
 
 
       if (softtest.or.colltest) then
@@ -4714,10 +4731,11 @@ c entering this function
       endif
 
       if (1d0-y_ij_fks.lt.tiny)then
+         call sborn_amp(p_born,amp2,jamp2,ret_amp_split,ret_amp_split_cnt,wgt,ans_cnt,ret_saveamp)
          if (pmass(j_fks).eq.zero.and.j_fks.le.nincoming)then
-            call sborncol_isr(pp,xi_i_fks,y_ij_fks,wgt,ret_amp_split)
+            call sborncol_isr(pp,xi_i_fks,y_ij_fks,wgt,ret_amp_split,ans_cnt,ret_amp_split_cnt)
          elseif (pmass(j_fks).eq.zero.and.j_fks.ge.nincoming+1)then
-            call sborncol_fsr(pp,xi_i_fks,y_ij_fks,wgt,ret_amp_split)
+            call sborncol_fsr(pp,xi_i_fks,y_ij_fks,wgt,ret_amp_split,ans_cnt,ret_amp_split_cnt)
          else
             wgt=0d0
             ret_amp_split(1:amp_split_size) = 0d0
@@ -4725,7 +4743,8 @@ c entering this function
       elseif (xi_i_fks.lt.tiny)then
          if (need_color_links.or.need_charge_links)then
 c has soft singularities
-            call sbornsoft(pp,xi_i_fks,y_ij_fks,wgt,ret_amp_split)
+            call sborn_amp(p_born,amp2,jamp2,ret_amp_split,ret_amp_split_cnt,wgt,ans_cnt,ret_saveamp)
+            call sbornsoft(pp,xi_i_fks,y_ij_fks,wgt,ret_amp_split,ret_saveamp,ret_amp_split_cnt)
          else
             wgt=0d0
             ret_amp_split(1:amp_split_size) = 0d0
@@ -4743,7 +4762,8 @@ c      amp_split(1:amp_split_size) = ret_amp_split(1:amp_split_size)
 
 
 
-      subroutine sborncol_fsr(p,xi_i_fks,y_ij_fks,wgt,ret_amp_split)
+      subroutine sborncol_fsr(p,xi_i_fks,y_ij_fks,wgt,ret_amp_split,
+     &                        ans_cnt, ret_amp_split_cnt)
       implicit none
       include "nexternal.inc"
       include 'genps.inc'
@@ -4823,7 +4843,7 @@ c Unphysical kinematics: set matrix elements equal to zero
       E_i_fks = p(0,i_fks)
       z = 1d0 - E_i_fks/(E_i_fks+E_j_fks)
       t = z * shat/4d0
-      call sborn_amp(p_born,amp2,jamp2,ret_amp_split,ret_amp_split_cnt,wgt_born,ans_cnt,ret_saveamp)
+C      call sborn_amp(p_born,amp2,jamp2,ret_amp_split,ret_amp_split_cnt,wgt_born,ans_cnt,ret_saveamp)
       if (iextra_cnt.gt.0)
      1    call extra_cnt(p_born, iextra_cnt, ans_extra_cnt)
       call AP_reduced(j_type,i_type,ch_j,ch_i,t,z,ap)
@@ -4835,7 +4855,7 @@ c Unphysical kinematics: set matrix elements equal to zero
 C check if any extra_cnt is needed
          if (iextra_cnt.gt.0) then
             if (iord.eq.isplitorder_born) then
-               call sborn_amp(p_born,amp2,jamp2,ret_amp_split,ret_amp_split_cnt,wgt_born,ans_cnt,ret_saveamp)
+C               call sborn_amp(p_born,amp2,jamp2,ret_amp_split,ret_amp_split_cnt,wgt_born,ans_cnt,ret_saveamp)
                wgt1(1) = ans_cnt(1,iord)
                wgt1(2) = ans_cnt(2,iord)
             elseif (iord.eq.isplitorder_cnt) then
@@ -4848,7 +4868,7 @@ C check if any extra_cnt is needed
                stop
             endif
          else
-            call sborn_amp(p_born,amp2,jamp2,ret_amp_split,ret_amp_split_cnt,wgt_born,ans_cnt,ret_saveamp)
+C            call sborn_amp(p_born,amp2,jamp2,ret_amp_split,ret_amp_split_cnt,wgt_born,ans_cnt,ret_saveamp)
             wgt1(1) = ans_cnt(1,iord)
             wgt1(2) = ans_cnt(2,iord)
          endif
@@ -4916,7 +4936,8 @@ c      amp_split(1:amp_split_size) = ret_amp_split(1:amp_split_size)
 
 
 
-      subroutine sborncol_isr(p,xi_i_fks,y_ij_fks,wgt,ret_amp_split)
+      subroutine sborncol_isr(p,xi_i_fks,y_ij_fks,wgt,ret_amp_split,
+     &                        ans_cnt, ret_amp_split_cnt)
       implicit none
       include "nexternal.inc"
       double precision p(0:3,nexternal),wgt
@@ -4996,6 +5017,7 @@ C  (when not doing event projection).
 C For the soft-collinear one, use p_born
       if (xi_i_fks.gt.0d0.and..not.use_evpr) then
           p_born_used(:,:) = p_born_coll(:,:)
+          call sborn_amp(p_born_used,amp2,jamp2,ret_amp_split,ret_amp_split_cnt,wgt_born,ans_cnt,ret_saveamp)
       else ! if (xi_i_fks.eq.0d0) then
           p_born_used(:,:) = p_born(:,:)
       endif
@@ -5022,7 +5044,7 @@ C check if any extra_cnt is needed
          if (iextra_cnt.gt.0) then
             if (iord.eq.isplitorder_born) then
             ! this is the contribution from the born ME
-               call sborn_amp(p_born_used,amp2,jamp2,ret_amp_split,ret_amp_split_cnt,wgt_born,ans_cnt,ret_saveamp)
+C               call sborn_amp(p_born_used,amp2,jamp2,ret_amp_split,ret_amp_split_cnt,wgt_born,ans_cnt,ret_saveamp)
                wgt1(1:2) = ans_cnt(1:2,iord)
             else if (iord.eq.isplitorder_cnt) then
             ! this is the contribution from the extra cnt
@@ -5033,7 +5055,7 @@ C check if any extra_cnt is needed
                stop
             endif
          else
-            call sborn_amp(p_born_used,amp2,jamp2,ret_amp_split,ret_amp_split_cnt,wgt_born,ans_cnt,ret_saveamp)
+C            call sborn_amp(p_born_used,amp2,jamp2,ret_amp_split,ret_amp_split_cnt,wgt_born,ans_cnt,ret_saveamp)
             wgt1(1:2) = ans_cnt(1:2,iord)
         endif
         amp_split_cnt_local(1:amp_split_size,1,iord)=
@@ -5706,7 +5728,8 @@ c q->gq splitting
 
 
 
-      subroutine sbornsoft(pp,xi_i_fks,y_ij_fks,wgt,ret_amp_split)
+      subroutine sbornsoft(pp,xi_i_fks,y_ij_fks,wgt,ret_amp_split,
+     $                     ret_saveamp, ret_amp_split_cnt)
       implicit none
 
       include "nexternal.inc"
@@ -5722,7 +5745,7 @@ c      include "fks.inc"
       complex*16 ans_cnt(2,nsplitorders)
       double precision amp2(ngraphs), jamp2(0:ncolor)
       DOUBLE PRECISION RET_AMP_SPLIT(AMP_SPLIT_SIZE)
-      DOUBLE COMPLEX DUMMY_AMP_SPLIT_CNT(AMP_SPLIT_SIZE,2,NSPLITORDERS)
+      DOUBLE COMPLEX RET_AMP_SPLIT_CNT(AMP_SPLIT_SIZE,2,NSPLITORDERS)
       double complex ret_saveamp(ngraphs,max_bhel)
 
       integer m,n
@@ -5756,7 +5779,7 @@ c Call the Born to be sure that 'CalculatedBorn' is done correctly. This
 c should always be done before calling the color-correlated Borns,
 c because of the caching of the diagrams.
 c
-      call sborn_amp(p_born(0,1),amp2,jamp2,RET_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,wgt1,ans_cnt,ret_saveamp)
+C      call sborn_amp(p_born(0,1),amp2,jamp2,RET_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,wgt1,ans_cnt,ret_saveamp)
 c
 C Reset the amp_split array
 C      amp_split(1:amp_split_size) = 0d0
@@ -5770,7 +5793,7 @@ C      amp_split(1:amp_split_size) = 0d0
             if ((m.ne.n .or. (m.eq.n .and. pmass(m).ne.ZERO)) .and.
      &           n.ne.i_fks.and.m.ne.i_fks) then
 C wgt includes the gs/w^2
-               call sborn_sf(p_born,m,n,wgt,ans_cnt,DUMMY_AMP_SPLIT_CNT,ret_saveamp,amp_split_soft)
+               call sborn_sf(p_born,m,n,wgt,ans_cnt,ret_amp_split_cnt,ret_saveamp,amp_split_soft)
                if (wgt.ne.0d0) then
                   call eikonal_reduced(pp,m,n,i_fks,j_fks,
      #                                 xi_i_fks,y_ij_fks,eik)
@@ -5874,7 +5897,12 @@ c Calculate the eikonal factor
 
 
       subroutine sreal_deg(p,xi_i_fks,y_ij_fks,
-     #                     collrem_xi,collrem_lxi)
+     #                     collrem_xi,collrem_lxi,
+     #    amp_split_wgtdegrem_xi,amp_split_wgtdegrem_lxi,
+     #    amp_split_wgtdegrem_muF,
+     #    amp_split_wgtpsch_p, amp_split_wgtpsch_l,
+     #    amp_split_wgtpsch_d,
+     #    ans_cnt,ret_amp_split_cnt)
       use extra_weights
       implicit none
       include "genps.inc"
@@ -5943,16 +5971,9 @@ C keep track of each split orders
      $                 amp_split_wgtdegrem_xi(amp_split_size),
      $                 amp_split_wgtdegrem_lxi(amp_split_size),
      $                 amp_split_wgtdegrem_muF(amp_split_size)
-      common /to_amp_split_deg/amp_split_wgtdegrem_xi,
-     $                         amp_split_wgtdegrem_lxi,
-     $                         amp_split_wgtdegrem_muF
-      ! amp_split for the PDF scheme
       double precision amp_split_wgtpsch_p(amp_split_size),
      $                 amp_split_wgtpsch_l(amp_split_size),
      $                 amp_split_wgtpsch_d(amp_split_size)
-      common /to_amp_split_dis/amp_split_wgtpsch_p,
-     $                         amp_split_wgtpsch_l,
-     $                         amp_split_wgtpsch_d
       double precision prefact_xi
 
       logical use_evpr
@@ -6058,7 +6079,7 @@ C check if any extra_cnt is needed
         if (iextra_cnt.gt.0) then
             if (iord.eq.isplitorder_born) then
             ! this is the contribution from the born ME
-               call sborn_amp(p_born_used,amp2,jamp2,ret_amp_split,ret_amp_split_cnt,wgt_born,ans_cnt,ret_saveamp)
+C               call sborn_amp(p_born_used,amp2,jamp2,ret_amp_split,ret_amp_split_cnt,wgt_born,ans_cnt,ret_saveamp)
                wgt1(1) = ans_cnt(1,iord)
                wgt1(2) = ans_cnt(2,iord)
             else if (iord.eq.isplitorder_cnt) then
@@ -6071,7 +6092,7 @@ C check if any extra_cnt is needed
                stop
             endif
         else
-           call sborn_amp(p_born_used,amp2,jamp2,ret_amp_split,ret_amp_split_cnt,wgt_born,ans_cnt,ret_saveamp)
+C           call sborn_amp(p_born_used,amp2,jamp2,ret_amp_split,ret_amp_split_cnt,wgt_born,ans_cnt,ret_saveamp)
            wgt1(1) = ans_cnt(1,iord)
            wgt1(2) = ans_cnt(2,iord)
         endif
@@ -7063,7 +7084,7 @@ c To be sure that color-correlated Borns work well, we need to have
 c *always* a call to sborn(p_born,wgt) just before. This is okay,
 c because there is a call above in this subroutine
 C wgt includes the gs/w^2
-                  call sborn_sf(p_born,m,n,wgt,ans_cnt,ret_amp_split_cnt,ret_saveamp,amp_split_soft)
+                  call sborn_sf(p_born,m,n,wgt,ans_cnt,ret_amp_split_cnt,ret_saveamp,amp_split_soft) 
                   if (wgt.ne.0d0) then
                      call eikonal_Ireg(p,m,n,xicut_used,eikIreg)
                      contr=contr+wgt*eikIreg

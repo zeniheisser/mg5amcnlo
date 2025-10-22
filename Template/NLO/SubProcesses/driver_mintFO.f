@@ -364,6 +364,10 @@ c timing statistics
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
       double precision p_born(0:3,nexternal-1)
       common /pborn/   p_born
+      
+      double precision p_born_coll(0:3,nexternal-1)
+      common/pborn_coll/p_born_coll
+
       double precision virtual_over_born
       common/c_vob/virtual_over_born
       logical                calculatedBorn
@@ -409,6 +413,18 @@ C Real variables
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
       double precision   xi_i_fks_cnt(-2:2)
       common /cxiifkscnt/xi_i_fks_cnt
+C Real deg amplitudes
+      double precision amp_split_collrem_xi(amp_split_size), 
+     $                 amp_split_collrem_lxi(amp_split_size),
+     $                 amp_split_wgtdegrem_xi(amp_split_size),
+     $                 amp_split_wgtdegrem_lxi(amp_split_size),
+     $                 amp_split_wgtdegrem_muF(amp_split_size)
+      double precision amp_split_wgtpsch_p(amp_split_size),
+     $                 amp_split_wgtpsch_l(amp_split_size),
+     $                 amp_split_wgtpsch_d(amp_split_size)
+      double precision p_born_used(0:3,nexternal-1)
+
+      logical storeCalculatedBorn
 
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
@@ -534,28 +550,78 @@ c         wgt_me_real=0d0
             pass_cuts_check=.true.
             call set_cms_stuff(izero)
             call set_alphaS(p1_cnt(0,1,0))
+            storeCalculatedBorn=calculatedBorn
+            p_born_used(:,:) = p_born(:,:)
+            calculatedBorn=.false.
+            call sborn_amp(p_born_used,born_amp2,born_jamp2,born_amp_split
+     $                    ,born_amp_split_cnt,wgt_born,born_ans_cnt,born_saveamp)
+            calculatedBorn=storeCalculatedBorn
             call include_multichannel_enhance(3)
-            call sreal(p1_cnt(0,1,0),0d0,y_ij_fks_ev,fx_s,real_amp_split)
+            call sreal(p1_cnt(0,1,0),0d0,y_ij_fks_ev,fx_s,real_amp_split
+     $               ,born_amp_split,born_amp_split_cnt,born_ans_cnt,born_saveamp)
             call compute_soft_counter_term(0d0,real_amp_split,fx_s)
             call set_cms_stuff(itwo)
-            call sreal_deg(p1_cnt(0,1,2),zero,one, deg_xi_sc,deg_lxi_sc)
-            call sreal(p1_cnt(0,1,2),zero,one,fx_sc,real_amp_split)
-            call compute_soft_collinear_counter_term(0d0,real_amp_split,fx_sc)
+            storeCalculatedBorn=calculatedBorn
+            p_born_used(:,:) = p_born(:,:)
+            calculatedBorn=.false.
+            call sborn_amp(p_born_used,born_amp2,born_jamp2,born_amp_split
+     $                    ,born_amp_split_cnt,wgt_born,born_ans_cnt,born_saveamp)
+            calculatedBorn=storeCalculatedBorn
+            call sreal_deg(p1_cnt(0,1,2),zero,one, deg_xi_sc,deg_lxi_sc,
+     $    amp_split_wgtdegrem_xi,amp_split_wgtdegrem_lxi,
+     $    amp_split_wgtdegrem_muF,
+     $    amp_split_wgtpsch_p, amp_split_wgtpsch_l,
+     $    amp_split_wgtpsch_d,
+     $    born_ans_cnt,born_amp_split_cnt)
+            call sreal(p1_cnt(0,1,2),zero,one,fx_sc,real_amp_split
+     $               ,born_amp_split,born_amp_split_cnt,born_ans_cnt,born_saveamp)
+            call compute_soft_collinear_counter_term(0d0,real_amp_split,fx_sc,
+     &    amp_split_wgtdegrem_xi,amp_split_wgtdegrem_lxi,
+     &    amp_split_wgtdegrem_muF,
+     &    amp_split_wgtpsch_p, amp_split_wgtpsch_l,
+     &    amp_split_wgtpsch_d)
          endif
          if (passcuts_coll .and. abrv.ne.'real') then
            call set_alphaS(p1_cnt(0,1,1))
            call set_cms_stuff(ione)
+           storeCalculatedBorn=calculatedBorn
+           if(xi_i_fks_cnt(1).gt.0d0.and..not.use_evpr) then
+             p_born_used(:,:) = p_born_coll(:,:)
+           else
+             p_born_used(:,:) = p_born(:,:)
+           endif
+           calculatedBorn=.false.
+           call sborn_amp(p_born_used,born_amp2,born_jamp2,born_amp_split
+     $                    ,born_amp_split_cnt,wgt_born,born_ans_cnt,born_saveamp)
+           calculatedBorn=storeCalculatedBorn
            call sreal_deg(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,deg_xi_c
-     $                   ,deg_lxi_c)
-           call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fx_c,real_amp_split)
-           call compute_collinear_counter_term(0d0,real_amp_split,fx_c)
+     $                   ,deg_lxi_c,
+     $    amp_split_wgtdegrem_xi,amp_split_wgtdegrem_lxi,
+     $    amp_split_wgtdegrem_muF,
+     $    amp_split_wgtpsch_p, amp_split_wgtpsch_l,
+     $    amp_split_wgtpsch_d,
+     $    born_ans_cnt,born_amp_split_cnt)
+           call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fx_c,real_amp_split
+     $               ,born_amp_split,born_amp_split_cnt,born_ans_cnt,born_saveamp)
+           call compute_collinear_counter_term(0d0,real_amp_split,fx_c,
+     &    amp_split_wgtdegrem_xi,amp_split_wgtdegrem_lxi,
+     &    amp_split_wgtdegrem_muF,
+     &    amp_split_wgtpsch_p, amp_split_wgtpsch_l,
+     &    amp_split_wgtpsch_d)
          endif
          if (passcuts_n1body) then
             pass_cuts_check=.true.
             call set_cms_stuff(mohdr)
             call set_alphaS(p)
+            storeCalculatedBorn=calculatedBorn
+            p_born_used(:,:) = p_born(:,:)
+            calculatedBorn=.false.
+            call sborn_amp(p_born_used,born_amp2,born_jamp2,born_amp_split
+     $                    ,born_amp_split_cnt,wgt_born,born_ans_cnt,born_saveamp)
+            calculatedBorn=storeCalculatedBorn
             call include_multichannel_enhance(2)
-            call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx_ev,real_amp_split)
+            call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx_ev,real_amp_split,
+     $               born_amp_split,born_amp_split_cnt,born_ans_cnt,born_saveamp)
             call compute_real_emission(p,1d0,real_amp_split,fx_ev)
          endif
       enddo
