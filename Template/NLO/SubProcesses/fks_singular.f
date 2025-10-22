@@ -4658,7 +4658,8 @@ c$$$                  shower_H_scale(iFKS)=ref_H_scale(iFKS)-pt_hardness
 
 
 
-      subroutine sreal(pp,xi_i_fks,y_ij_fks,wgt,ret_amp_split)
+      subroutine sreal(pp,xi_i_fks,y_ij_fks,wgt,ret_amp_split,
+     &                 ans_cnt, ret_amp_split_cnt, ret_saveamp)
 c Wrapper for the n+1 contribution. Returns the n+1 matrix element
 c squared reduced by the FKS damping factor xi**2*(1-y).
 c Close to the soft or collinear limits it calls the corresponding
@@ -4729,9 +4730,9 @@ c entering this function
         write(*,*)shattmp,shat
         stop
       endif
+C      call sborn_amp(p_born,amp2,jamp2,ret_amp_split,ret_amp_split_cnt,wgt,ans_cnt,ret_saveamp)
 
       if (1d0-y_ij_fks.lt.tiny)then
-         call sborn_amp(p_born,amp2,jamp2,ret_amp_split,ret_amp_split_cnt,wgt,ans_cnt,ret_saveamp)
          if (pmass(j_fks).eq.zero.and.j_fks.le.nincoming)then
             call sborncol_isr(pp,xi_i_fks,y_ij_fks,wgt,ret_amp_split,ans_cnt,ret_amp_split_cnt)
          elseif (pmass(j_fks).eq.zero.and.j_fks.ge.nincoming+1)then
@@ -4743,7 +4744,6 @@ c entering this function
       elseif (xi_i_fks.lt.tiny)then
          if (need_color_links.or.need_charge_links)then
 c has soft singularities
-            call sborn_amp(p_born,amp2,jamp2,ret_amp_split,ret_amp_split_cnt,wgt,ans_cnt,ret_saveamp)
             call sbornsoft(pp,xi_i_fks,y_ij_fks,wgt,ret_amp_split,ret_saveamp,ret_amp_split_cnt)
          else
             wgt=0d0

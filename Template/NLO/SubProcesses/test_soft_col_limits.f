@@ -74,6 +74,7 @@ c*****************************************************************************
      &     ,pt_hardness
 C split orders stuff
       include 'orders.inc'
+      include 'born_nhel.inc'
 
       double precision ret_amp_split(amp_split_size)
 
@@ -91,6 +92,13 @@ C split orders stuff
       external         ran2
       integer              MCcntcalled
       common/c_MCcntcalled/MCcntcalled
+
+C Born variables
+      double precision amp2(ngraphs), jamp2(0:ncolor)
+      complex*16 ans_cnt(2,nsplitorders)
+      double complex born_split_cnt(amp_split_size,2,nsplitorders)
+      double complex born_saveamp(ngraphs,max_bhel)
+
 c
 c     Properly initialize PY8 controls
 c
@@ -324,7 +332,8 @@ c Note that tests are always performed at fixed energy with Bjorken x=1.
             if (ilim.eq.2) then
                calculatedBorn=.false.
                call set_cms_stuff(0)
-               call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fx,ret_amp_split)
+C               call sborn_amp(p_born,amp2,jamp2,ret_amp_split,born_split_cnt,wgt,ans_cnt,born_saveamp)
+               call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fx,ret_amp_split,ans_cnt,born_split_cnt,born_saveamp)
             else
 c Set xi_i_fks to zero, to correctly generate the collinear momenta for the
 c configurations close to the soft-collinear limit
@@ -340,7 +349,8 @@ c Initialise shower_S_scale to a large value, not to get spurious dead zones
                if(ilim.eq.0)then
                   call xmcsubt_wrap(p1_cnt(0,1,0),zero,y_ij_fks_ev,fx)
                else
-                  call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fx,ret_amp_split)
+C                  call sborn_amp(p_born,amp2,jamp2,ret_amp_split,born_split_cnt,wgt,ans_cnt,born_saveamp)
+                  call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fx,ret_amp_split,ans_cnt,born_split_cnt,born_saveamp)
                endif
             endif
             fxl(1)=fx*wgt
@@ -355,7 +365,8 @@ c Initialise shower_S_scale to a large value, not to get spurious dead zones
             enddo
             if (ilim.eq.2) then
                call set_cms_stuff(-100)
-               call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx,ret_amp_split)
+C               call sborn_amp(p_born,amp2,jamp2,ret_amp_split,born_split_cnt,wgt,ans_cnt,born_saveamp)
+               call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx,ret_amp_split,ans_cnt,born_split_cnt,born_saveamp)
             else
 c Now generate the momenta for the original xi_i_fks=0.1, slightly shifted,
 c because otherwise fresh random will be used...
@@ -396,8 +407,9 @@ c because otherwise fresh random will be used...
                call generate_momenta(ndim,iconfig,wgt,x,p)
                if (ilim.eq.2) then
                   calculatedBorn=.false.
+C                  call sborn_amp(p_born,amp2,jamp2,ret_amp_split,born_split_cnt,wgt,ans_cnt,born_saveamp)
                   call set_cms_stuff(0)
-                  call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fx,ret_amp_split)
+                  call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fx,ret_amp_split,ans_cnt,born_split_cnt,born_saveamp)
                   fxl(i)=fx*wgt
                   wfxl(i)=jac_cnt(0)
                   do iamp=1,amp_split_size
@@ -406,7 +418,8 @@ c because otherwise fresh random will be used...
                   enddo
                   calculatedBorn=.false.
                   call set_cms_stuff(-100)
-                  call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx,ret_amp_split)
+C                  call sborn_amp(p_born,amp2,jamp2,ret_amp_split,born_split_cnt,wgt,ans_cnt,born_saveamp)
+                  call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx,ret_amp_split,ans_cnt,born_split_cnt,born_saveamp)
               else
                   calculatedBorn=.false.
                   call set_cms_stuff(-100)
@@ -573,7 +586,8 @@ c
             if(ilim.eq.0)then
                call xmcsubt_wrap(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fx)
             else
-               call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fx,ret_amp_split)
+C               call sborn_amp(p_born,amp2,jamp2,ret_amp_split,born_split_cnt,wgt,ans_cnt,born_saveamp)
+               call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fx,ret_amp_split,ans_cnt,born_split_cnt,born_saveamp)
             endif
             fxl(1)=fx*jac_cnt(1)
             wfxl(1)=jac_cnt(1)
@@ -588,7 +602,8 @@ c
 
             call set_cms_stuff(-100)
             if (ilim.eq.2) then
-               call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx,ret_amp_split)
+C               call sborn_amp(p_born,amp2,jamp2,ret_amp_split,born_split_cnt,wgt,ans_cnt,born_saveamp)
+               call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx,ret_amp_split,ans_cnt,born_split_cnt,born_saveamp)
             else
                call xmcsubt_wrap(p,xi_i_fks_ev,y_ij_fks_ev,fx)
             endif
@@ -622,7 +637,8 @@ c
                if (ilim.eq.2) then
                   calculatedBorn=.false.
                   call set_cms_stuff(1)
-                  call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fx,ret_amp_split) 
+C                  call sborn_amp(p_born,amp2,jamp2,ret_amp_split,born_split_cnt,wgt,ans_cnt,born_saveamp)
+                  call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fx,ret_amp_split,ans_cnt,born_split_cnt,born_saveamp) 
                   fxl(i)=fx*jac_cnt(1)
                   wfxl(i)=jac_cnt(1)
                   do iamp=1,amp_split_size
@@ -631,7 +647,8 @@ c
                   enddo
                   calculatedBorn=.false.
                   call set_cms_stuff(-100)
-                  call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx,ret_amp_split)
+C                  call sborn_amp(p_born,amp2,jamp2,ret_amp_split,born_split_cnt,wgt,ans_cnt,born_saveamp)
+                  call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx,ret_amp_split,ans_cnt,born_split_cnt,born_saveamp)
                else
                   calculatedBorn=.false.
                   call set_cms_stuff(-100)

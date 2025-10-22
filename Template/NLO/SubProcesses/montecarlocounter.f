@@ -854,7 +854,9 @@ c Particle types (=colour) of i_fks, j_fks and fks_mother
       logical is_aorg(nexternal)
       common /c_is_aorg/is_aorg
       ! amp split stuff
+      include 'genps.inc'
       include 'orders.inc'
+      include 'born_nhel.inc'
 
       double precision ret_amp_split(amp_split_size)
 
@@ -865,6 +867,13 @@ c Particle types (=colour) of i_fks, j_fks and fks_mother
      $                 amp_split_c(amp_split_size), 
      $                 amp_split_sc(amp_split_size)
       double precision pmass(nexternal)
+C Born variables
+      double precision p_born(0:3,nexternal-1)
+      common /pborn/   p_born
+      double precision amp2(ngraphs), jamp2(0:ncolor)
+      complex*16 ans_cnt(2,nsplitorders)
+      double complex born_split_cnt(amp_split_size,2,nsplitorders)
+      double complex born_saveamp(ngraphs,max_bhel)
       include "pmass.inc"
 c
       wgt=0d0
@@ -874,19 +883,23 @@ c
       ! this contribution is needed only for i_fks being a gluon/photon
       ! (soft limit)
       if (is_aorg(i_fks))then
+         call sborn_amp(p_born,amp2,jamp2,ret_amp_split,born_split_cnt,wgt,ans_cnt,born_saveamp)
 c i_fks is gluon/photon
          call set_cms_stuff(izero)
-         call sreal(p1_cnt(0,1,0),zero,y_ij_fks,wgts,ret_amp_split)
+         call sreal(p1_cnt(0,1,0),zero,y_ij_fks,wgts,ret_amp_split
+     $             ,ans_cnt,born_split_cnt,born_saveamp)
          do iamp=1, amp_split_size
            amp_split_s(iamp) = ret_amp_split(iamp)
          enddo
          call set_cms_stuff(ione)
-         call sreal(p1_cnt(0,1,1),xi_i_fks,one,wgtc,ret_amp_split)
+         call sreal(p1_cnt(0,1,1),xi_i_fks,one,wgtc,ret_amp_split
+     $             ,ans_cnt,born_split_cnt,born_saveamp)
          do iamp=1, amp_split_size
            amp_split_c(iamp) = ret_amp_split(iamp)
          enddo
          call set_cms_stuff(itwo)
-         call sreal(p1_cnt(0,1,2),zero,one,wgtsc,ret_amp_split)
+         call sreal(p1_cnt(0,1,2),zero,one,wgtsc,ret_amp_split
+     $             ,ans_cnt,born_split_cnt,born_saveamp)
          do iamp=1, amp_split_size
            amp_split_sc(iamp) = ret_amp_split(iamp)
          enddo
@@ -2565,7 +2578,7 @@ c Jamp amplitudes of the Born (to be filled with a call the sborn())
       complex*16 ans_cnt(2,nsplitorders)
       DOUBLE PRECISION DUMMY_AMP_SPLIT(AMP_SPLIT_SIZE)
       DOUBLE COMPLEX DUMMY_AMP_SPLIT_CNT(AMP_SPLIT_SIZE,2,NSPLITORDERS)
-      double complex ret_saveamp(ngraphs,max_bhel)
+      double complex born_saveamp(ngraphs,max_bhel)
 C      common/to_amps/  amp2         ,jamp2
 c Stuff to be written (depending on AddInfoLHE) onto the LHE file
       integer iSorH_lhe,ifks_lhe(fks_configs) ,jfks_lhe(fks_configs)
@@ -2660,7 +2673,7 @@ c Assign flow on statistical basis
             endif
          else
              ! use the born-bars
-            call sborn_amp(p_born,amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,dummy,ans_cnt,ret_saveamp)
+            call sborn_amp(p_born,amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,dummy,ans_cnt,born_saveamp)
             wgt1=0.d0
             do i=1,max_bcol
                wgt1=wgt1+jamp2(i)
@@ -2904,7 +2917,7 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
       complex*16 ans_cnt(2, nsplitorders), wgt1(2)
       DOUBLE PRECISION DUMMY_AMP_SPLIT(AMP_SPLIT_SIZE)
       DOUBLE COMPLEX DUMMY_AMP_SPLIT_CNT(AMP_SPLIT_SIZE,2,NSPLITORDERS)
-      double complex ret_saveamp(ngraphs,max_bhel)
+      double complex born_saveamp(ngraphs,max_bhel)
 c      common /c_born_cnt/ ans_cnt
       double complex ans_extra_cnt(2,nsplitorders)
       integer iord, iextra_cnt, isplitorder_born, isplitorder_cnt
@@ -2941,11 +2954,11 @@ c might flip when rotating the momenta.
             p_born_rot(3,i)=-p_born(3,i)
          enddo
          calculatedBorn=.false.
-         call sborn_amp(p_born_rot,amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,wgt_born,ans_cnt,ret_saveamp)
+         call sborn_amp(p_born_rot,amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,wgt_born,ans_cnt,born_saveamp)
          if (iextra_cnt.gt.0) call extra_cnt(p_born_rot, iextra_cnt, ans_extra_cnt)
          calculatedBorn=.false.
       else
-         call sborn_amp(p_born,amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,wgt_born,ans_cnt,ret_saveamp)
+         call sborn_amp(p_born,amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,wgt_born,ans_cnt,born_saveamp)
          if (iextra_cnt.gt.0) call extra_cnt(p_born, iextra_cnt, ans_extra_cnt)
       endif
 
