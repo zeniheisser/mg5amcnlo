@@ -720,7 +720,15 @@ C Born variables
       double complex born_amp_split_cnt(amp_split_size,2,nsplitorders)
       double complex born_saveamp(ngraphs,max_bhel)
       double precision wgt_born
-      
+
+C Storage for born-like collinears
+      double precision coll_amp2(ngraphs), coll_jamp2(0:ncolor)
+      complex*16 coll_ans_cnt(2,nsplitorders)
+      double precision coll_amp_split(amp_split_size)
+      double complex coll_amp_split_cnt(amp_split_size,2,nsplitorders)
+      double complex coll_saveamp(ngraphs,max_bhel)
+      double precision wgt_coll
+
 C Virtual variables
       double precision amp_split_virt(amp_split_size),
      &     amp_split_born_for_virt(amp_split_size),
@@ -953,13 +961,16 @@ c by the call to compute_MC_subt_term) through the 'replace_MC_subt'.
                replace_MC_subt=(1d0-gfactcl)*(1d0-gfactsf)*probne
                storeCalculatedBorn=calculatedBorn
                calculatedBorn=.false.
-               call sborn_amp(p_born_used,born_amp2,born_jamp2,born_amp_split
+               call sborn_amp(p_born,born_amp2,born_jamp2,born_amp_split
      $                    ,born_amp_split_cnt,wgt_born,born_ans_cnt,born_saveamp)
+               calculatedBorn=.false.
+               call sborn_amp(p_born_coll,coll_amp2,coll_jamp2,coll_amp_split
+     $                    ,coll_amp_split_cnt,wgt_coll,coll_ans_cnt,coll_saveamp)
                calculatedBorn=storeCalculatedBorn
                call sreal_deg(p1_cnt(0,1,2),zero,one, deg_xi_sc,deg_lxi_sc,
      $    amp_split_wgtdegrem_xi,amp_split_wgtdegrem_lxi,amp_split_wgtdegrem_muF,
      $    amp_split_wgtpsch_p, amp_split_wgtpsch_l, amp_split_wgtpsch_d,
-     $    born_ans_cnt,born_amp_split_cnt)
+     $    born_ans_cnt,born_amp_split_cnt,coll_ans_cnt,coll_amp_split_cnt)
                storeCalculatedBorn=calculatedBorn
                p_born_used(:,:) = p_born(:,:)
                calculatedBorn=.false.
@@ -973,18 +984,18 @@ c by the call to compute_MC_subt_term) through the 'replace_MC_subt'.
      &    amp_split_wgtpsch_p, amp_split_wgtpsch_l,amp_split_wgtpsch_d)
                call set_cms_stuff(ione)
                replace_MC_subt=(1d0-gfactcl)*(1d0-gfactsf)*probne
-               if(xi_i_fks_cnt(1).gt.0d0.and..not.use_evpr) then
-                 storeCalculatedBorn=calculatedBorn
-                 p_born_used(:,:) = p_born_coll(:,:)
-                 calculatedBorn=.false.
-                 call sborn_amp(p_born_used,born_amp2,born_jamp2,born_amp_split
+               storeCalculatedBorn=calculatedBorn
+               calculatedBorn=.false.
+               call sborn_amp(p_born,born_amp2,born_jamp2,born_amp_split
      $                    ,born_amp_split_cnt,wgt_born,born_ans_cnt,born_saveamp)
-                 calculatedBorn=storeCalculatedBorn
-               endif
+               calculatedBorn=.false.
+               call sborn_amp(p_born_coll,coll_amp2,coll_jamp2,coll_amp_split
+     $                    ,coll_amp_split_cnt,wgt_coll,coll_ans_cnt,coll_saveamp)
+               calculatedBorn=storeCalculatedBorn
                call sreal_deg(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,deg_xi_c,deg_lxi_c,
      $    amp_split_wgtdegrem_xi,amp_split_wgtdegrem_lxi,amp_split_wgtdegrem_muF,
      $    amp_split_wgtpsch_p, amp_split_wgtpsch_l, amp_split_wgtpsch_d,
-     $    born_ans_cnt,born_amp_split_cnt)
+     $    born_ans_cnt,born_amp_split_cnt,coll_ans_cnt,coll_amp_split_cnt)
                storeCalculatedBorn=calculatedBorn
                p_born_used(:,:) = p_born(:,:)
                calculatedBorn=.false.

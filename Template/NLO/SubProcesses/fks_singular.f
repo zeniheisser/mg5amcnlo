@@ -5902,7 +5902,8 @@ c Calculate the eikonal factor
      #    amp_split_wgtdegrem_muF,
      #    amp_split_wgtpsch_p, amp_split_wgtpsch_l,
      #    amp_split_wgtpsch_d,
-     #    ans_cnt,ret_amp_split_cnt)
+     #    ans_cnt,ret_amp_split_cnt,
+     #    coll_ans_cnt,coll_split_cnt)
       use extra_weights
       implicit none
       include "genps.inc"
@@ -5946,8 +5947,11 @@ c Particle types (=color/charges) of i_fks, j_fks and fks_mother
       common/cparticle_types/i_type,j_type,m_type,ch_i,ch_j,ch_m
       double precision amp2(ngraphs), jamp2(0:ncolor)
       complex*16 ans_cnt(2, nsplitorders), wgt1(2)
+      complex*16 coll_ans_cnt(2, nsplitorders), used_cnt(2, nsplitorders)
       double precision ret_amp_split(amp_split_size)
       double complex ret_amp_split_cnt(amp_split_size,2,nsplitorders)
+      double complex coll_split_cnt(amp_split_size,2,nsplitorders)
+      double complex used_split_cnt(amp_split_size,2,nsplitorders)
       double complex ret_saveamp(ngraphs,max_bhel)
       logical split_type(nsplitorders) 
       common /c_split_type/split_type
@@ -6011,8 +6015,12 @@ C  (when not doing event projection).
 C For the soft-collinear one, use p_born
       if (xi_i_fks.gt.0d0.and..not.use_evpr) then
           p_born_used(:,:) = p_born_coll(:,:)
+          used_split_cnt(:,:,:) = coll_split_cnt(:,:,:)
+          used_cnt(:,:) = coll_ans_cnt(:,:)
       else ! if (xi_i_fks.eq.0d0) then
           p_born_used(:,:) = p_born(:,:)
+          used_split_cnt(:,:,:) = ret_amp_split_cnt(:,:,:)
+          used_cnt(:,:) = ans_cnt(:,:)
       endif
 
       if(j_fks.gt.nincoming)then
@@ -6071,7 +6079,7 @@ c A factor gS^2 is included in the Altarelli-Parisi kernels
 
       collrem_xi=0.d0
       collrem_lxi=0.d0
-      calculatedborn=.false.
+C      calculatedborn=.false.
       do iord = 1, nsplitorders
         if (.not.split_type(iord).or.(iord.ne.qed_pos.and.iord.ne.qcd_pos)) cycle
 
@@ -6080,8 +6088,8 @@ C check if any extra_cnt is needed
             if (iord.eq.isplitorder_born) then
             ! this is the contribution from the born ME
 C               call sborn_amp(p_born_used,amp2,jamp2,ret_amp_split,ret_amp_split_cnt,wgt_born,ans_cnt,ret_saveamp)
-               wgt1(1) = ans_cnt(1,iord)
-               wgt1(2) = ans_cnt(2,iord)
+               wgt1(1) = used_cnt(1,iord)
+               wgt1(2) = used_cnt(2,iord)
             else if (iord.eq.isplitorder_cnt) then
             ! this is the contribution from the extra cnt
                call extra_cnt(p_born_used,iextra_cnt,ans_extra_cnt)
@@ -6093,8 +6101,8 @@ C               call sborn_amp(p_born_used,amp2,jamp2,ret_amp_split,ret_amp_spli
             endif
         else
 C           call sborn_amp(p_born_used,amp2,jamp2,ret_amp_split,ret_amp_split_cnt,wgt_born,ans_cnt,ret_saveamp)
-           wgt1(1) = ans_cnt(1,iord)
-           wgt1(2) = ans_cnt(2,iord)
+           wgt1(1) = used_cnt(1,iord)
+           wgt1(2) = used_cnt(2,iord)
         endif
         
         if (iord.eq.qcd_pos) iap = 1
@@ -6114,29 +6122,29 @@ c has to be inserted here
      &       xnorm
 
         amp_split_collrem_xi(1:amp_split_size) = amp_split_collrem_xi(1:amp_split_size)+ 
-     &   dble(ret_amp_split_cnt(1:amp_split_size,1,iord))*oo2pi*collrem_xi_tmp*xnorm
+     &   dble(used_split_cnt(1:amp_split_size,1,iord))*oo2pi*collrem_xi_tmp*xnorm
         amp_split_collrem_lxi(1:amp_split_size) = amp_split_collrem_lxi(1:amp_split_size)+
-     &   dble(ret_amp_split_cnt(1:amp_split_size,1,iord))*oo2pi*collrem_lxi_tmp*xnorm
+     &   dble(used_split_cnt(1:amp_split_size,1,iord))*oo2pi*collrem_lxi_tmp*xnorm
 
         prefact_xi=ap(iap)*log(shat*delta_used/(2*QES2)) -
      &               apprime(iap)
         amp_split_wgtdegrem_xi(1:amp_split_size) = amp_split_wgtdegrem_xi(1:amp_split_size)+
-     &   oo2pi*dble(ret_amp_split_cnt(1:amp_split_size,1,iord))*prefact_xi*xnorm
+     &   oo2pi*dble(used_split_cnt(1:amp_split_size,1,iord))*prefact_xi*xnorm
         amp_split_wgtdegrem_lxi(1:amp_split_size) = amp_split_collrem_lxi(1:amp_split_size)
         amp_split_wgtdegrem_muF(1:amp_split_size) = amp_split_wgtdegrem_muF(1:amp_split_size)-
-     &   oo2pi*dble(ret_amp_split_cnt(1:amp_split_size,1,iord))*ap(iap)*xnorm
+     &   oo2pi*dble(used_split_cnt(1:amp_split_size,1,iord))*ap(iap)*xnorm
         ! amp split for the PDF scheme
         if (PDFscheme.ne.0) then
           amp_split_wgtpsch_p(1:amp_split_size) = amp_split_wgtpsch_p(1:amp_split_size) - 
-     $     dble(ret_amp_split_cnt(1:amp_split_size,1,iord))*xkkernp(iap)*oo2pi*xnorm
+     $     dble(used_split_cnt(1:amp_split_size,1,iord))*xkkernp(iap)*oo2pi*xnorm
           amp_split_wgtpsch_l(1:amp_split_size) = amp_split_wgtpsch_l(1:amp_split_size) - 
-     $     dble(ret_amp_split_cnt(1:amp_split_size,1,iord))*xkkernl(iap)*oo2pi*xnorm
+     $     dble(used_split_cnt(1:amp_split_size,1,iord))*xkkernl(iap)*oo2pi*xnorm
           amp_split_wgtpsch_d(1:amp_split_size) = amp_split_wgtpsch_d(1:amp_split_size) - 
-     $     dble(ret_amp_split_cnt(1:amp_split_size,1,iord))*xkkernd(iap)*oo2pi*xnorm
+     $     dble(used_split_cnt(1:amp_split_size,1,iord))*xkkernd(iap)*oo2pi*xnorm
         endif
 
       enddo
-      calculatedborn=.false.
+C      calculatedborn=.false.
 
       return
       end
