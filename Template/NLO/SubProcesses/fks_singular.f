@@ -4761,6 +4761,116 @@ c      amp_split(1:amp_split_size) = ret_amp_split(1:amp_split_size)
       end
 
 
+      subroutine sreal_store(pp,xi_i_fks,y_ij_fks,wgt,ret_amp_split,
+     &                 born_split,born_cnt,born_split_cnt,born_saveamp,
+     &                 coll_split,coll_cnt,coll_split_cnt,coll_saveamp)
+c Wrapper for the n+1 contribution. Returns the n+1 matrix element
+c squared reduced by the FKS damping factor xi**2*(1-y).
+c Close to the soft or collinear limits it calls the corresponding
+c Born and multiplies with the AP splitting function or eikonal factors.
+      implicit none
+      include "nexternal.inc"
+      include "coupl.inc"
+      include 'orders.inc'
+      include 'genps.inc'
+      include 'born_nhel.inc'
+
+      double precision pp(0:3,nexternal),wgt
+      double precision xi_i_fks,y_ij_fks
+
+      double precision ret_amp_split(amp_split_size)
+
+      double precision shattmp,dot
+      integer i,j
+
+      integer i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+
+      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
+     #                        sqrtshat,shat
+
+      logical softtest,colltest
+      common/sctests/softtest,colltest
+
+      double precision zero,tiny
+      parameter (zero=0d0)
+      logical need_color_links, need_charge_links
+      common /c_need_links/need_color_links, need_charge_links
+
+      double precision amp2(ngraphs), jamp2(0:ncolor)
+      double precision born_split(amp_split_size)
+      complex*16 born_cnt(2, nsplitorders)
+      double complex born_split_cnt(amp_split_size,2,nsplitorders)
+      double complex born_saveamp(ngraphs,max_bhel)
+      double precision coll_split(amp_split_size)
+      complex*16 coll_cnt(2, nsplitorders)
+      double complex coll_split_cnt(amp_split_size,2,nsplitorders)
+      double complex coll_saveamp(ngraphs,max_bhel)
+      double precision p_born(0:3,nexternal-1)
+      common/pborn/p_born
+
+      double precision pmass(nexternal)
+      include "pmass.inc"
+
+
+
+      if (softtest.or.colltest) then
+         tiny=1d-12
+      else
+         tiny=1d-6
+      endif
+
+      if(pp(0,1).le.0.d0)then
+c Unphysical kinematics: set matrix elements equal to zero
+        wgt=0.d0
+        return
+      endif
+
+c Consistency check -- call to set_cms_stuff() must be done prior to
+c entering this function
+      if (nincoming.eq.2) then
+         shattmp=2d0*dot(pp(0,1),pp(0,2))
+      else
+         shattmp=pp(0,1)**2
+      endif
+      if(abs(shattmp/shat-1.d0).gt.1.d-5)then
+        write(*,*)'Error in sreal: inconsistent shat'
+        write(*,*)shattmp,shat
+        stop
+      endif
+
+      if (1d0-y_ij_fks.lt.tiny)then
+         ret_amp_split(:) = born_split(:)
+         if (pmass(j_fks).eq.zero.and.j_fks.le.nincoming)then
+            call sborncol_isr(pp,xi_i_fks,y_ij_fks,wgt,ret_amp_split,born_cnt,born_split_cnt)
+         elseif (pmass(j_fks).eq.zero.and.j_fks.ge.nincoming+1)then
+            call sborncol_fsr(pp,xi_i_fks,y_ij_fks,wgt,ret_amp_split,born_cnt,born_split_cnt)
+         else
+            wgt=0d0
+            ret_amp_split(1:amp_split_size) = 0d0
+         endif
+      elseif (xi_i_fks.lt.tiny)then
+         if (need_color_links.or.need_charge_links)then
+c has soft singularities
+            ret_amp_split(:) = born_split(:)
+            call sbornsoft(pp,xi_i_fks,y_ij_fks,wgt,ret_amp_split,born_saveamp,born_split_cnt)
+         else
+            wgt=0d0
+            ret_amp_split(1:amp_split_size) = 0d0
+         endif
+      else
+         call smatrix_real(pp,ret_amp_split,wgt)
+         wgt=wgt*xi_i_fks**2*(1d0-y_ij_fks)
+         ret_amp_split(1:amp_split_size) = ret_amp_split(1:amp_split_size)*xi_i_fks**2*(1d0-y_ij_fks)
+      endif
+
+c      amp_split(1:amp_split_size) = ret_amp_split(1:amp_split_size)
+
+      return
+      end
+
+
 
       subroutine sborncol_fsr(p,xi_i_fks,y_ij_fks,wgt,ret_amp_split,
      &                        ans_cnt, ret_amp_split_cnt)
