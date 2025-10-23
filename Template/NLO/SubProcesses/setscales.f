@@ -204,7 +204,7 @@ c Reset calculatedBorn, because the couplings might have been changed.
 c This is needed in particular for the MC events, because there the
 c coupling should be set according to the real-emission kinematics,
 c even when computing the Born matrix elements.
-      calculatedBorn=.false.
+      ! calculatedBorn=.false.
 c
       return
       end

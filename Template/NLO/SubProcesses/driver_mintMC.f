@@ -721,6 +721,9 @@ c
       common /c_vegas_x_fold/x_save,ifold_picked
       integer icolup_s(2,nexternal-1),icolup_h(2,nexternal)
       common /colour_connections/ icolup_s,icolup_h
+      
+      double precision ret_amp_split(amp_split_size)
+
 C Born variables
       double precision born_amp2(ngraphs), born_jamp2(0:ncolor)
       complex*16 born_ans_cnt(2,nsplitorders)
@@ -932,6 +935,10 @@ c check if event or counter-event passes cuts
             if (ickkw.eq.3) call set_FxFx_scale(-3,p,nFKSprocess)
             passcuts_n1body=passcuts(p,rwgt)
             if (.not. (passcuts_nbody.or.passcuts_n1body)) cycle
+
+C Evaluate amplitudes in advance
+
+
             if (passcuts_nbody .and. abrv.ne.'real') then
                pass_cuts_check=.true.
 c Include the MonteCarlo subtraction terms
@@ -940,7 +947,7 @@ c Include the MonteCarlo subtraction terms
                   if (ickkw.eq.3) call set_FxFx_scale(-3,p,nFKSprocess)
                   call set_alphaS(p)
                   calculatedBorn=.false.
-                  call sborn_amp(p_born,born_amp2,born_jamp2,real_amp_split
+                  call sborn_amp(p_born,born_amp2,born_jamp2,born_amp_split
      $                    ,born_amp_split_cnt,wgt_born,born_ans_cnt,born_saveamp)
                   call include_multichannel_enhance(4,born_amp2,ev_amp2,norad_amp2)
                   call compute_MC_subt_term(p,passcuts_nbody,gfactsf
@@ -961,72 +968,42 @@ c by the call to compute_MC_subt_term) through the 'replace_MC_subt'.
                if (ickkw.eq.3) call set_FxFx_scale(-2,p1_cnt(0,1,0),nFKSprocess)
                call set_alphaS(p1_cnt(0,1,0))
                calculatedBorn=.false.
-               call sborn_amp(p_born,born_amp2,born_jamp2,real_amp_split
-     $                    ,born_amp_split_cnt,wgt_born,born_ans_cnt,born_saveamp)
-               call include_multichannel_enhance(3,born_amp2,ev_amp2,norad_amp2)
-               replace_MC_subt=(1d0-gfactsf)*probne
-               storeCalculatedBorn=calculatedBorn
-               p_born_used(:,:) = p_born(:,:)
-               call sreal_store(p1_cnt(0,1,0),0d0,y_ij_fks_ev,fx_s,real_amp_split
-     $              ,born_amp_split,born_ans_cnt,born_amp_split_cnt,born_saveamp
-     $              ,coll_amp_split,coll_ans_cnt,coll_amp_split_cnt,coll_saveamp)
-               call compute_soft_counter_term(replace_MC_subt,real_amp_split,fx_s)
-               call set_cms_stuff(itwo)
-               replace_MC_subt=(1d0-gfactcl)*(1d0-gfactsf)*probne
-               storeCalculatedBorn=calculatedBorn
+               call sborn_amp(p_born_coll,coll_amp2,coll_jamp2,coll_amp_split
+     $                    ,coll_amp_split_cnt,wgt_coll,coll_ans_cnt,coll_saveamp)
                calculatedBorn=.false.
                call sborn_amp(p_born,born_amp2,born_jamp2,born_amp_split
      $                    ,born_amp_split_cnt,wgt_born,born_ans_cnt,born_saveamp)
-               calculatedBorn=.false.
-               call sborn_amp(p_born_coll,coll_amp2,coll_jamp2,coll_amp_split
-     $                    ,coll_amp_split_cnt,wgt_coll,coll_ans_cnt,coll_saveamp)
-               calculatedBorn=storeCalculatedBorn
+               call include_multichannel_enhance(3,born_amp2,ev_amp2,norad_amp2)
+               replace_MC_subt=(1d0-gfactsf)*probne
+               call sreal_store(p1_cnt(0,1,0),0d0,y_ij_fks_ev,fx_s,ret_amp_split
+     $              ,real_amp_split
+     $              ,born_amp_split,born_ans_cnt,born_amp_split_cnt,born_saveamp
+     $              ,coll_amp_split,coll_ans_cnt,coll_amp_split_cnt,coll_saveamp)
+               call compute_soft_counter_term(replace_MC_subt,ret_amp_split,fx_s)
+               call set_cms_stuff(itwo)
+               replace_MC_subt=(1d0-gfactcl)*(1d0-gfactsf)*probne
                call sreal_deg(p1_cnt(0,1,2),zero,one, deg_xi_sc,deg_lxi_sc,
      $    amp_split_wgtdegrem_xi,amp_split_wgtdegrem_lxi,amp_split_wgtdegrem_muF,
      $    amp_split_wgtpsch_p, amp_split_wgtpsch_l, amp_split_wgtpsch_d,
      $    born_ans_cnt,born_amp_split_cnt,coll_ans_cnt,coll_amp_split_cnt)
-               storeCalculatedBorn=calculatedBorn
-               p_born_used(:,:) = p_born(:,:)
-               calculatedBorn=.false.
-               call sborn_amp(p_born,born_amp2,born_jamp2,born_amp_split
-     $                    ,born_amp_split_cnt,wgt_born,born_ans_cnt,born_saveamp)
-               calculatedBorn=.false.
-               call sborn_amp(p_born_coll,coll_amp2,coll_jamp2,coll_amp_split
-     $                    ,coll_amp_split_cnt,wgt_coll,coll_ans_cnt,coll_saveamp)
-               calculatedBorn=storeCalculatedBorn
-               call sreal_store(p1_cnt(0,1,2),zero,one,fx_sc,real_amp_split
+               call sreal_store(p1_cnt(0,1,2),zero,one,fx_sc,ret_amp_split
+     $              ,real_amp_split
      $              ,born_amp_split,born_ans_cnt,born_amp_split_cnt,born_saveamp
      $              ,coll_amp_split,coll_ans_cnt,coll_amp_split_cnt,coll_saveamp)
-               call compute_soft_collinear_counter_term(replace_MC_subt,real_amp_split,fx_sc,
+               call compute_soft_collinear_counter_term(replace_MC_subt,ret_amp_split,fx_sc,
      &    amp_split_wgtdegrem_xi, amp_split_wgtdegrem_lxi, amp_split_wgtdegrem_muF,
      &    amp_split_wgtpsch_p, amp_split_wgtpsch_l,amp_split_wgtpsch_d)
                call set_cms_stuff(ione)
                replace_MC_subt=(1d0-gfactcl)*(1d0-gfactsf)*probne
-               storeCalculatedBorn=calculatedBorn
-               calculatedBorn=.false.
-               call sborn_amp(p_born,born_amp2,born_jamp2,born_amp_split
-     $                    ,born_amp_split_cnt,wgt_born,born_ans_cnt,born_saveamp)
-               calculatedBorn=.false.
-               call sborn_amp(p_born_coll,coll_amp2,coll_jamp2,coll_amp_split
-     $                    ,coll_amp_split_cnt,wgt_coll,coll_ans_cnt,coll_saveamp)
-               calculatedBorn=storeCalculatedBorn
                call sreal_deg(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,deg_xi_c,deg_lxi_c,
      $    amp_split_wgtdegrem_xi,amp_split_wgtdegrem_lxi,amp_split_wgtdegrem_muF,
      $    amp_split_wgtpsch_p, amp_split_wgtpsch_l, amp_split_wgtpsch_d,
      $    born_ans_cnt,born_amp_split_cnt,coll_ans_cnt,coll_amp_split_cnt)
-               storeCalculatedBorn=calculatedBorn
-               p_born_used(:,:) = p_born(:,:)
-               calculatedBorn=.false.
-               call sborn_amp(p_born,born_amp2,born_jamp2,born_amp_split
-     $                    ,born_amp_split_cnt,wgt_born,born_ans_cnt,born_saveamp)
-               calculatedBorn=.false.
-               call sborn_amp(p_born_coll,coll_amp2,coll_jamp2,coll_amp_split
-     $                    ,coll_amp_split_cnt,wgt_coll,coll_ans_cnt,coll_saveamp)
-               calculatedBorn=storeCalculatedBorn
-               call sreal_store(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fx_c,real_amp_split
+               call sreal_store(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fx_c,ret_amp_split
+     $              ,real_amp_split
      $              ,born_amp_split,born_ans_cnt,born_amp_split_cnt,born_saveamp
      $              ,coll_amp_split,coll_ans_cnt,coll_amp_split_cnt,coll_saveamp)
-               call compute_collinear_counter_term(replace_MC_subt,real_amp_split,fx_c,
+               call compute_collinear_counter_term(replace_MC_subt,ret_amp_split,fx_c,
      &    amp_split_wgtdegrem_xi,amp_split_wgtdegrem_lxi,amp_split_wgtdegrem_muF,
      &    amp_split_wgtpsch_p, amp_split_wgtpsch_l, amp_split_wgtpsch_d)
             endif
@@ -1035,7 +1012,7 @@ c Include the real-emission contribution.
                pass_cuts_check=.true.
                call set_cms_stuff(mohdr)
                if (ickkw.eq.3) call set_FxFx_scale(-3,p,nFKSprocess)
-               storeCalculatedBorn=calculatedBorn
+               call set_alphaS(p_born_ev)
                calculatedBorn=.false.
                call sborn_amp(p_born_ev,ev_amp2,born_jamp2,born_amp_split
      $                    ,born_amp_split_cnt,wgt_born,born_ans_cnt,born_saveamp)
@@ -1053,10 +1030,11 @@ c Include the real-emission contribution.
                call include_multichannel_enhance(2,born_amp2,ev_amp2,norad_amp2)
                sudakov_damp=probne
                call smatrix_real(p,real_amp_split,fx_ev)
-               call sreal_store(p,xi_i_fks_ev,y_ij_fks_ev,fx_ev,real_amp_split
+               call sreal_store(p,xi_i_fks_ev,y_ij_fks_ev,fx_ev,ret_amp_split
+     $              ,real_amp_split
      $              ,born_amp_split,born_ans_cnt,born_amp_split_cnt,born_saveamp
      $              ,coll_amp_split,coll_ans_cnt,coll_amp_split_cnt,coll_saveamp)
-               call compute_real_emission(p,sudakov_damp,real_amp_split,fx_ev)
+               call compute_real_emission(p,sudakov_damp,ret_amp_split,fx_ev)
             endif
 c Update the shower starting scale with the shape from the MC
 c subtraction terms.

@@ -4780,7 +4780,7 @@ c      amp_split(1:amp_split_size) = ret_amp_split(1:amp_split_size)
       end
 
 
-      subroutine sreal_store(pp,xi_i_fks,y_ij_fks,wgt,ret_amp_split,
+      subroutine sreal_store(pp,xi_i_fks,y_ij_fks,wgt,ret_amp_split,real_amp_split,
      &                 born_split,born_cnt,born_split_cnt,born_saveamp,
      &                 coll_split,coll_cnt,coll_split_cnt,coll_saveamp)
 c Wrapper for the n+1 contribution. Returns the n+1 matrix element
@@ -4798,6 +4798,8 @@ c Born and multiplies with the AP splitting function or eikonal factors.
       double precision xi_i_fks,y_ij_fks
 
       double precision ret_amp_split(amp_split_size)
+
+      double precision real_amp_split(amp_split_size)
 
       double precision shattmp,dot
       integer i,j
@@ -4859,6 +4861,8 @@ c entering this function
         stop
       endif
 
+      ret_amp_split(:) = 0d0
+
       if (1d0-y_ij_fks.lt.tiny)then
          ret_amp_split(:) = born_split(:)
          if (pmass(j_fks).eq.zero.and.j_fks.le.nincoming)then
@@ -4882,6 +4886,7 @@ c has soft singularities
          endif
       else
 C         call smatrix_real(pp,ret_amp_split,wgt)
+         ret_amp_split(:) = real_amp_split(:)
          wgt=wgt*xi_i_fks**2*(1d0-y_ij_fks)
          ret_amp_split(1:amp_split_size) = ret_amp_split(1:amp_split_size)*xi_i_fks**2*(1d0-y_ij_fks)
       endif
@@ -6076,6 +6081,7 @@ c      include "fks.inc"
       double precision amp2(ngraphs), jamp2(0:ncolor)
       DOUBLE PRECISION RET_AMP_SPLIT(AMP_SPLIT_SIZE)
       DOUBLE COMPLEX RET_AMP_SPLIT_CNT(AMP_SPLIT_SIZE,2,NSPLITORDERS)
+      double complex local_split_cnt(AMP_SPLIT_SIZE,2,NSPLITORDERS)
       double complex ret_saveamp(ngraphs,max_bhel)
 
       integer m,n
@@ -6114,6 +6120,7 @@ c
 C Reset the amp_split array
 C      amp_split(1:amp_split_size) = 0d0
       ret_amp_split(1:amp_split_size) = 0d0
+      local_split_cnt(:,:,:) = ret_amp_split_cnt(:,:,:)
 
       softcontr=0d0
       do i=1,fks_j_from_i(i_fks,0)
@@ -6123,7 +6130,7 @@ C      amp_split(1:amp_split_size) = 0d0
             if ((m.ne.n .or. (m.eq.n .and. pmass(m).ne.ZERO)) .and.
      &           n.ne.i_fks.and.m.ne.i_fks) then
 C wgt includes the gs/w^2
-               call sborn_sf(p_born,m,n,wgt,ans_cnt,ret_amp_split_cnt,ret_saveamp,amp_split_soft)
+               call sborn_sf(p_born,m,n,wgt,ans_cnt,local_split_cnt,ret_saveamp,amp_split_soft)
                if (wgt.ne.0d0) then
                   call eikonal_reduced(pp,m,n,i_fks,j_fks,
      #                                 xi_i_fks,y_ij_fks,eik)
