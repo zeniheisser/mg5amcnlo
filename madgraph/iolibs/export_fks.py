@@ -2829,6 +2829,7 @@ Parameters              %(params)s\n\
 
         replace_dict['nsqorders'] = nsqorders
         replace_dict['iflines_col'] = ''
+        replace_dict['iflines_col_nocheck'] = ''
          
         for i, c_link in enumerate(color_links):
             ilink = i+1
@@ -2840,19 +2841,31 @@ Parameters              %(params)s\n\
                     %(iff)s ((m.eq.%(m)d .and. n.eq.%(n)d).or.(m.eq.%(n)d .and. n.eq.%(m)d)) then \n\
                     call sb_sf_%(ilink)3.3d(p_born,wgt_col,ret_amp_split_cnt,loc_saveamp)\n" \
                     % {'m':m, 'n': n, 'iff': iff, 'ilink': ilink}
+                replace_dict['iflines_col_nocheck'] += \
+                "c link partons %(m)d and %(n)d \n\
+                    %(iff)s ((m.eq.%(m)d .and. n.eq.%(n)d).or.(m.eq.%(n)d .and. n.eq.%(m)d)) then \n\
+                    call sb_sf_nocheck_%(ilink)3.3d(p_born,wgt_col,ret_amp_split_cnt,loc_saveamp)\n" \
+                    % {'m':m, 'n': n, 'iff': iff, 'ilink': ilink}
             else:
                 replace_dict['iflines_col'] += \
                 "c link partons %(m)d and %(n)d \n\
                     %(iff)s (m.eq.%(m)d .and. n.eq.%(n)d) then \n\
                     call sb_sf_%(ilink)3.3d(p_born,wgt_col,ret_amp_split_cnt,loc_saveamp)\n" \
                     % {'m':m, 'n': n, 'iff': iff, 'ilink': ilink}
+                replace_dict['iflines_col_nocheck'] += \
+                "c link partons %(m)d and %(n)d \n\
+                    %(iff)s (m.eq.%(m)d .and. n.eq.%(n)d) then \n\
+                    call sb_sf_nocheck_%(ilink)3.3d(p_born,wgt_col,ret_amp_split_cnt,loc_saveamp)\n" \
+                    % {'m':m, 'n': n, 'iff': iff, 'ilink': ilink}
 
         
         if replace_dict['iflines_col']:
             replace_dict['iflines_col'] += 'endif\n'
+            replace_dict['iflines_col_nocheck'] += 'endif\n'
         else:
             # this is when no color links are there
             replace_dict['iflines_col'] += 'write(*,*) \'Error in sborn_sf, no color links\'\nstop\n'
+            replace_dict['iflines_col_nocheck'] += 'write(*,*) \'Error in sborn_sf, no color links\'\nstop\n'
 
         file = open(os.path.join(_file_path, \
                           'iolibs/template_files/sborn_sf_fks.inc')).read()
