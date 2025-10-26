@@ -1,4 +1,5 @@
-      subroutine compute_born(p_born,ret_amp2,ret_jamp2,ret_amp_split,ret_amp_split_cnt,wgt_c,ret_ans_cnt,ret_saveamp)
+C      subroutine compute_born(p_born,ret_amp2,ret_jamp2,ret_amp_split,ret_amp_split_cnt,wgt_c,ret_ans_cnt,ret_saveamp)
+      subroutine compute_born(ret_amp_split)
 c This subroutine computes the Born matrix elements and adds its value
 c to the list of weights using the add_wgt subroutine
       use extra_weights
@@ -161,7 +162,7 @@ C      call sborn_amp(p_born,ret_amp2,ret_jamp2,ret_amp_split,ret_amp_split_cnt,
       end
 
 
-      subroutine compute_ewsudakov(p_born,ret_amp2,ret_jamp2,ret_amp_split,ret_amp_split_cnt,wgt_c,ret_ans_cnt,ret_saveamp)
+      subroutine compute_ewsudakov(p_born,wgt_c,ret_saveamp)
 c This subroutine computes the NLO EW corrections in the Sudakov
 c   approximation
       use extra_weights
@@ -7196,7 +7197,7 @@ c
       
 
 
-      subroutine bornsoftvirtual(p,bsv_wgt,virt_wgt,born_wgt
+      subroutine bornsoftvirtual(p,p_born,bsv_wgt,virt_wgt,born_wgt
      &           ,amp_split_virt,amp_split_born_for_virt,amp_split_avv
      &           ,amp_split_wgtnstmp,amp_split_wgtwnstmpmuf,amp_split_wgtwnstmpmur
      &           ,born_wgt_arg,born_cnt,born_split_cnt,born_saveamp)
@@ -7243,7 +7244,7 @@ c      include "fks.inc"
       common/fks_colors/c,gamma,gammap,gamma_ph,gammap_ph
       double precision c_used, gamma_used, gammap_used
       double precision p_born(0:3,nexternal-1)
-      common/pborn/p_born
+C      common/pborn/p_born
       double precision double,single,xmu2
       logical ComputePoles,fksprefact
       parameter (ComputePoles=.false.)
