@@ -961,22 +961,22 @@ c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
             passcuts_n1body=passcuts(p,rwgt)
             if (.not. (passcuts_nbody.or.passcuts_n1body)) cycle
             ! if (passcuts_nbody) then
-               ! call set_alphaS(p_born_ev)
-               ! call set_alphaS_vec(p_born_ev,1)
+               call set_alphaS(p_born_ev)
+               call set_alphaS_vec(p_born_ev,4*(FKS_configs - 1))
                calculatedBorn=.false.
                call sborn_amp_vec(p_born_ev,ev_amp2,ev_jamp2,ev_amp_split
      $                    ,ev_amp_split_cnt,wgt_ev,ev_ans_cnt,ev_saveamp
      $                    ,4*(FKS_configs - 1))
                sev_amp2(:,iFKS,1)=ev_amp2(:)
-               ! call set_alphaS(p_born_norad)
-               ! call set_alphaS_vec(p_born_norad,1)
+               call set_alphaS(p_born_norad)
+               call set_alphaS_vec(p_born_norad,4*(FKS_configs - 1) + 1)
                calculatedBorn=.false.
                call sborn_amp_vec(p_born_norad,norad_amp2,norad_jamp2,norad_amp_split
      $                    ,norad_amp_split_cnt,wgt_norad,norad_ans_cnt,norad_saveamp
      $                    ,4*(FKS_configs - 1) + 1)
                snorad_amp2(:,iFKS,1)=norad_amp2(:)
-                  ! call set_alphaS(p1_cnt(0,1,0))
-                  ! call set_alphaS_vec(p1_cnt(0,1,0),1)
+               call set_alphaS(p1_cnt(0,1,0))
+               call set_alphaS_vec(p1_cnt(0,1,0),4*(FKS_configs - 1) + 2)
                calculatedBorn=.false.
                call sborn_amp_vec(p_born_coll,coll_amp2,coll_jamp2,coll_amp_split
      $                    ,coll_amp_split_cnt,wgt_coll,coll_ans_cnt,coll_saveamp
@@ -995,8 +995,8 @@ c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
                snb_ans_cnt(:,:,iFKS,1)=nb_ans_cnt(:,:)
                snb_saveamp(:,:,iFKS,1)=nb_saveamp(:,:)
                calculatedBorn=.false.
-               ! call set_alphaS(p)
-               ! call set_alphaS_vec(p,1)
+               call set_alphaS(p)
+               call set_alphaS_vec(p,4*(FKS_configs - 1) + 3)
                calculatedBorn=.false.
                call sborn_amp_vec(p_born_rot,rot_amp2,rot_jamp2,rot_amp_split
      $                    ,rot_amp_split_cnt,wgt_rot,rot_ans_cnt,rot_saveamp
@@ -1026,8 +1026,8 @@ c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
             ! endif
             ! if (passcuts_n1body) then
                call set_cms_stuff(mohdr)
-               ! call set_alphaS(p)
-               ! call set_alphaS_vec(p,1)
+               call set_alphaS(p)
+               call set_alphaS_vec(p,4*(FKS_configs - 1) + 3)
                call smatrix_real_vec(p,real_amp_split,fx_ev,4*(FKS_configs - 1) + 3)
                sreal_amp_split(:,iFKS,1)=real_amp_split(:)
                sfx_ev(iFKS,1)=fx_ev
@@ -1056,8 +1056,8 @@ c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
          if (p_born(0,1).lt.0d0) goto 12
          ! p_born_nb(:,:) = p_born(:,:)
          passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
-         ! call set_alphaS(p1_cnt(0,1,0))
-         ! call set_alphaS_vec(p1_cnt(0,1,0),1)
+         call set_alphaS(p1_cnt(0,1,0))
+         call set_alphaS_vec(p1_cnt(0,1,0),4*FKS_configs +1)
          calculatedBorn=.false.
          call sborn_amp_vec(p_born,born_amp2,born_jamp2,born_amp_split
      $                     ,born_amp_split_cnt,wgt_born,born_ans_cnt,born_saveamp
