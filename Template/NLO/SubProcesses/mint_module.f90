@@ -200,6 +200,7 @@ contains
 2      kpoint_iter=kpoint_iter+1
        do kpoint=1,ncalls
           new_point=.true.
+          call get_channel
           call get_random_x(x,vol,kfold)
           call compute_integrand(fun,x,vol)
           call accumulate_the_point(x)
@@ -818,7 +819,7 @@ contains
     integer, dimension(ndimmax) :: kfold
     double precision :: vol,dx
     double precision, dimension(ndimmax) :: x
-    call get_channel
+!    call get_channel
 ! find random x, and its random cell
     do kdim=1,ndim
 ! if(even_rn), we should compute the ncell and the rand from the ran3()
@@ -1647,6 +1648,7 @@ contains
     double precision :: vol
     double precision, dimension(ndimmax) :: x
     integer, dimension(ndimmax) :: kfold
+    call get_channel
     call get_random_x(x,vol,kfold)
     upper_bound=ymax_virt(ichan)
   end subroutine get_random_cell_flat

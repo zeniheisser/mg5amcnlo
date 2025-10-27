@@ -687,6 +687,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'pythia_unlops.f',
                      'driver_mintMC.f',
                      'driver_mintFO.f',
+                     'driver.f90',
                      'pineappl_interface.cc',
                      'pineappl_interface_dummy.f',
                      'pineappl_common.inc',
@@ -1812,6 +1813,19 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
             integer nfksprocess
             common/c_nfksprocess/nfksprocess
             """ 
+        # the real me wrapper
+        text_vec = \
+            """subroutine smatrix_real_vec(p, ret_amp_split, wgt, ivec)
+            implicit none
+            include 'nexternal.inc'
+            include 'orders.inc'
+            double precision ret_amp_split(amp_split_size)
+            double precision p(0:3, nexternal)
+            double precision wgt
+            integer ivec
+            integer nfksprocess
+            common/c_nfksprocess/nfksprocess
+            """ 
         # the pdf wrapper
         text1 = \
             """\n\ndouble precision function dlum()
@@ -1826,6 +1840,10 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
                     """if (nfksprocess.eq.%(n)d) then
                     call smatrix%(n_me)d_amp(p, ret_amp_split, wgt)
                     else""" % {'n': n + 1, 'n_me' : info['n_me']}
+                text_vec += \
+                    """if (nfksprocess.eq.%(n)d) then
+                    call smatrix%(n_me)d_amp_vec(p, ret_amp_split, wgt, ivec)
+                    else""" % {'n': n + 1, 'n_me' : info['n_me']}
                 text1 += \
                     """if (nfksprocess.eq.%(n)d) then
                     call dlum_%(n_me)d(dlum)
@@ -1834,6 +1852,12 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
             text += \
                 """
                 write(*,*) 'ERROR: invalid n in real_matrix :', nfksprocess
+                stop\n endif
+                return \n end
+                """
+            text_vec += \
+                """
+                write(*,*) 'ERROR: invalid n in real_matrix_vec :', nfksprocess
                 stop\n endif
                 return \n end
                 """
@@ -1849,6 +1873,12 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
                 return
                 end
                 """
+            text_vec += \
+                """
+                wgt=0d0
+                return
+                end
+                """
             text1 += \
                 """
                 call dlum_0(dlum)
@@ -1858,6 +1888,7 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
 
         # Write the file
         writer_me.writelines(text)
+        writer_me.writelines(text_vec)
         writer_lum.writelines(text1)
         return 0
 
@@ -2011,6 +2042,13 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         helas_calls = fortran_model.get_matrix_element_calls(\
                     matrix_element)
         replace_dict['helas_calls'] = "\n".join(helas_calls)
+        
+        coupling_dep = fortran_model.get('model').get('coupling_dep')
+        hel_vec = "\n".join(helas_calls)
+        for coup in coupling_dep.keys():
+            hel_vec = hel_vec.replace(coup, coup + "_vec(ivec)")
+        
+        replace_dict['helas_calls_vec'] = hel_vec
 
         # Extract version number and date from VERSION file
         info_lines = self.get_mg5_info_lines()

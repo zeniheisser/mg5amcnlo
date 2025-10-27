@@ -660,6 +660,8 @@ c
 
 
       function sigintF(xx,vegas_wgt,ifl,f)
+      use couplings
+      use driver
       use weight_lines
       use mint_module
       implicit none
@@ -687,10 +689,6 @@ c
       double precision p_born(0:3,nexternal-1), p_born_rot(0:3,nexternal-1)
       common /pborn/   p_born
       
-      ! double precision p_born_nb(0:3,nexternal-1), p_born_n1(0:3,nexternal-1)
-
-      ! double precision p_born_diff(0:3,nexternal-1)
-      ! double precision sum_diff
 
       double precision p_born_coll(0:3,nexternal-1)
       common/pborn_coll/p_born_coll
@@ -738,32 +736,19 @@ C Born variables
       double complex born_saveamp(ngraphs,max_bhel)
       double precision wgt_born
 
-
-C Born variables vectorised storage
-      double precision sborn_amp2(ngraphs,1), sborn_jamp2(0:ncolor,1)
-      complex*16 sborn_ans_cnt(2,nsplitorders,1)
-      double precision sborn_amp_split(amp_split_size,1)
-      double complex sborn_amp_split_cnt(amp_split_size,2,nsplitorders,1)
-      double complex sborn_saveamp(ngraphs,max_bhel,1)
-      double precision swgt_born(1)
-
-C Born variables
       double precision ev_amp2(ngraphs), ev_jamp2(0:ncolor)
       complex*16 ev_ans_cnt(2,nsplitorders)
       double precision ev_amp_split(amp_split_size)
       double complex ev_amp_split_cnt(amp_split_size,2,nsplitorders)
       double complex ev_saveamp(ngraphs,max_bhel)
       double precision wgt_ev
-      double precision sev_amp2(ngraphs,FKS_configs,1)
 
-C Born variables
       double precision norad_amp2(ngraphs), norad_jamp2(0:ncolor)
       complex*16 norad_ans_cnt(2,nsplitorders)
       double precision norad_amp_split(amp_split_size)
       double complex norad_amp_split_cnt(amp_split_size,2,nsplitorders)
       double complex norad_saveamp(ngraphs,max_bhel)
       double precision wgt_norad
-      double precision snorad_amp2(ngraphs,FKS_configs,1)
    
 
 C Storage for born-like collinears
@@ -774,23 +759,6 @@ C Storage for born-like collinears
       double complex coll_saveamp(ngraphs,max_bhel)
       double precision wgt_coll
 
-C Store storage for born-like collinears
-      complex*16 scb_ans_cnt(2,nsplitorders,FKS_configs,1)
-      double precision scb_amp_split(amp_split_size,FKS_configs,1)
-      double complex scb_amp_split_cnt(amp_split_size,2,nsplitorders,FKS_configs,1)
-      double complex scb_saveamp(ngraphs,max_bhel,FKS_configs,1)
-
-C Store storage for born-like collinears
-      complex*16 sc1_ans_cnt(2,nsplitorders,FKS_configs,1)
-      double precision sc1_amp_split(amp_split_size,FKS_configs,1)
-      double complex sc1_amp_split_cnt(amp_split_size,2,nsplitorders,FKS_configs,1)
-      double complex sc1_saveamp(ngraphs,max_bhel,FKS_configs,1)
-
-C Store storage for rotated Borns
-      complex*16 srot_ans_cnt(2,nsplitorders,FKS_configs,1)
-      double precision srot_amp_split(amp_split_size,FKS_configs,1)
-      double complex srot_amp_split_cnt(amp_split_size,2,nsplitorders,FKS_configs,1)
-      double complex srot_saveamp(ngraphs,max_bhel,FKS_configs,1)
 
 C Virtual variables
       double precision amp_split_virt(amp_split_size),
@@ -812,8 +780,6 @@ C Real variables
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
       double precision   xi_i_fks_cnt(-2:2)
       common /cxiifkscnt/xi_i_fks_cnt
-      double precision sreal_amp_split(amp_split_size,FKS_configs,1)
-      double precision sfx_ev(FKS_configs,1)
 
 C Born variables stored in n+1-body kinematics
       double precision n1_amp2(ngraphs), n1_jamp2(0:ncolor)
@@ -842,24 +808,6 @@ C Born variables
       double complex nb_saveamp(ngraphs,max_bhel)
       double precision wgt_nb
 
-C Born variables
-      double precision snb_amp2(ngraphs,FKS_configs,1)
-      double precision snb_jamp2(0:ncolor,FKS_configs,1)
-      complex*16 snb_ans_cnt(2,nsplitorders,FKS_configs,1)
-      double precision snb_amp_split(amp_split_size,FKS_configs,1)
-      double complex snb_amp_split_cnt(amp_split_size,2,nsplitorders,FKS_configs,1)
-      double complex snb_saveamp(ngraphs,max_bhel,FKS_configs,1)
-      double precision swgt_nb(FKS_configs,1)
-
-
-C Born variables
-      double precision sn1_amp2(ngraphs,FKS_configs,1)
-      double precision sn1_jamp2(0:ncolor,FKS_configs,1)
-      complex*16 sn1_ans_cnt(2,nsplitorders,FKS_configs,1)
-      double precision sn1_amp_split(amp_split_size,FKS_configs,1)
-      double complex sn1_amp_split_cnt(amp_split_size,2,nsplitorders,FKS_configs,1)
-      double complex sn1_saveamp(ngraphs,max_bhel,FKS_configs,1)
-      double precision swgt_n1(FKS_configs,1)
 
 C Real deg amplitudes
       double precision amp_split_collrem_xi(amp_split_size), 
@@ -903,6 +851,8 @@ c partons in this multiplicity when running the code at NLO accuracy
 c ("npLO" is -1 in that case). When running LO only, invert "npLO" and
 c "npNLO".
          call setup_event_attributes
+         call allocate_couplings(4*FKS_configs + 1)
+         call allocate_storage(1)
       endif
 
       if (ifl.eq.0) then
@@ -927,38 +877,32 @@ c "npNLO".
          do i=1,nndim
             x_save(i,ifold_counter)=x(i)
          enddo
+C  Randomly chooses the FKS configuration to work on (proc_map(0,1))
          if (ifl.eq.0)
      &        call get_MC_integer(1,proc_map(0,0),proc_map(0,1),vol1)
 
      
 C ZW: Reset all the storage arrays
-         sev_amp2(:, :, :)=0d0
-         snorad_amp2(:, :, :)=0d0
-         scb_amp_split(:, :, :)=0d0
-         scb_amp_split_cnt(:, :, :, :, :)=(0d0,0d0)
-         scb_ans_cnt(:, :, :, :)=(0d0,0d0)
-         scb_saveamp(:, :, :, :)=(0d0,0d0)
-         snb_amp2(:, :, :)=0d0
-         snb_amp_split(:, :, :)=0d0
-         snb_amp_split_cnt(:, :, :, :, :)=(0d0,0d0)
-         snb_ans_cnt(:, :, :, :)=(0d0,0d0)
-         snb_saveamp(:, :, :, :)=(0d0,0d0)
-         srot_amp_split(:, :, :)=0d0
-         srot_amp_split_cnt(:, :, :, :, :)=(0d0,0d0)
-         srot_ans_cnt(:, :, :, :)=(0d0,0d0)
-         srot_saveamp(:, :, :, :)=(0d0,0d0)
-         sc1_amp_split(:, :, :)=0d0
-         sc1_amp_split_cnt(:, :, :, :, :)=(0d0,0d0)
-         sc1_ans_cnt(:, :, :, :)=(0d0,0d0)
-         sc1_saveamp(:, :, :, :)=(0d0,0d0)
-         sn1_amp2(:, :, :)=0d0
-         sn1_jamp2(:, :, :)=0d0
-         sn1_amp_split(:, :, :)=(0d0,0d0)
-         sn1_amp_split_cnt(:, :, :, :, :)=(0d0,0d0)
-         sn1_ans_cnt(:, :, :, :)=(0d0,0d0)
-         sn1_saveamp(:, :, :, :)=(0d0,0d0)
-         sreal_amp_split(:, :, :)=(0d0,0d0)
-         sfx_ev(:,:)=0d0
+         call reset_storage()
+
+C ZW: Generate momenta and running couplings
+         nFKS_picked_nbody=proc_map(proc_map(0,1),1)
+         if (sum.eq.0) then
+c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
+            nFKS_in=nFKS_picked_nbody
+            call get_born_nFKSprocess(nFKS_in,nFKS_out)
+            nFKS_picked_nbody=nFKS_out
+         endif
+         nbody=.true.
+         call update_fks_dir(nFKS_picked_nbody)
+         jac=jac/(proc_map(0,0)*vol1)
+         call generate_momenta(nndim,iconfig,jac,x,p)
+         if (p_born(0,1).lt.0d0) goto 12
+         call set_alphaS(p1_cnt(0,1,0))
+         call set_alphaS_vec(p1_cnt(0,1,0),4*FKS_configs +1)
+         spb(:,:,0,1) = p_born(:,:)
+         sp1_cnt(:,:,0,1) = p1_cnt(:,:,0)
+         nbody=.false.
 
          do i=1,proc_map(proc_map(0,1),0)
             iFKS=proc_map(proc_map(0,1),i)
@@ -966,12 +910,48 @@ C ZW: Reset all the storage arrays
             jac=1d0/vol1
             icolup_s(1,1)=-1    ! set colour connection to -1: i.e., complete_xmcsubt has not been called
             call generate_momenta(nndim,iconfig,jac,x,p)
+            if (p_born(0,1).lt.0d0) cycle
+            call set_cms_stuff(izero)
+            if (ickkw.eq.3) call set_FxFx_scale(-2,p1_cnt(0,1,0),nFKSprocess)
+            passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
+            call set_cms_stuff(mohdr)
+            if (ickkw.eq.3) call set_FxFx_scale(-3,p,nFKSprocess)
+            passcuts_n1body=passcuts(p,rwgt)
+            call set_alphaS(p_born_ev)
+            call set_alphaS_vec(p_born_ev,4*(FKS_configs - 1))
+            spb_ev(:,:,iFKS,1) = p_born_ev(:,:)
+            call set_alphaS(p_born_norad)
+            call set_alphaS_vec(p_born_norad,4*(FKS_configs - 1) + 1)
+            spb_norad(:,:,iFKS,1) = p_born_norad(:,:)
+            call set_alphaS(p1_cnt(0,1,0))
+            call set_alphaS_vec(p1_cnt(0,1,0),4*(FKS_configs - 1) + 2)
+            spb(:,:,iFKS,1) = p_born(:,:)
             do k=1,nexternal-1
                p_born_rot(0,k)=p_born(0,k)
                p_born_rot(1,k)=-p_born(1,k)
                p_born_rot(2,k)=p_born(2,k)
                p_born_rot(3,k)=-p_born(3,k)
             enddo
+            spb_rot(:,:,iFKS,1) = p_born_rot(:,:)
+            sp1_cnt(:,:,iFKS,1) = p1_cnt(:,:,0)
+            spb_coll(:,:,iFKS,1) = p_born_coll(:,:)
+            call set_alphaS(p)
+            call set_alphaS_vec(p,4*(FKS_configs - 1) + 3)
+            sp1(:,:,iFKS,1) = p(:,:)
+         enddo
+
+
+
+         do i=1,proc_map(proc_map(0,1),0)
+            iFKS=proc_map(proc_map(0,1),i)
+            call update_fks_dir(iFKS)
+            p_born(:,:)=spb(:,:,iFKS,1)
+            p_born_ev(:,:)=spb_ev(:,:,iFKS,1)
+            p_born_norad(:,:)=spb_norad(:,:,iFKS,1)
+            p_born_coll(:,:)=spb_coll(:,:,iFKS,1)
+            p_born_rot(:,:)=spb_rot(:,:,iFKS,1)
+            p1_cnt(:,:,0)=sp1_cnt(:,:,iFKS,1)
+            p(:,:) =sp1(:,:,iFKS,1)
             if (p_born(0,1).lt.0d0) cycle
             call set_cms_stuff(izero)
             if (ickkw.eq.3) call set_FxFx_scale(-2,p1_cnt(0,1,0),nFKSprocess)
@@ -981,51 +961,62 @@ C ZW: Reset all the storage arrays
             passcuts_n1body=passcuts(p,rwgt)
             if (.not. (passcuts_nbody.or.passcuts_n1body)) cycle
             ! if (passcuts_nbody) then
-               call set_alphaS(p_born_ev)
+               ! call set_alphaS(p_born_ev)
+               ! call set_alphaS_vec(p_born_ev,1)
                calculatedBorn=.false.
-               call sborn_amp(p_born_ev,ev_amp2,ev_jamp2,ev_amp_split
-     $                    ,ev_amp_split_cnt,wgt_ev,ev_ans_cnt,ev_saveamp)
+               call sborn_amp_vec(p_born_ev,ev_amp2,ev_jamp2,ev_amp_split
+     $                    ,ev_amp_split_cnt,wgt_ev,ev_ans_cnt,ev_saveamp
+     $                    ,4*(FKS_configs - 1))
                sev_amp2(:,iFKS,1)=ev_amp2(:)
-               call set_alphas(p_born_norad)
+               ! call set_alphaS(p_born_norad)
+               ! call set_alphaS_vec(p_born_norad,1)
                calculatedBorn=.false.
-               call sborn_amp(p_born_norad,norad_amp2,norad_jamp2,norad_amp_split
-     $                    ,norad_amp_split_cnt,wgt_norad,norad_ans_cnt,norad_saveamp)
+               call sborn_amp_vec(p_born_norad,norad_amp2,norad_jamp2,norad_amp_split
+     $                    ,norad_amp_split_cnt,wgt_norad,norad_ans_cnt,norad_saveamp
+     $                    ,4*(FKS_configs - 1) + 1)
                snorad_amp2(:,iFKS,1)=norad_amp2(:)
-               call set_alphaS(p1_cnt(0,1,0))
+                  ! call set_alphaS(p1_cnt(0,1,0))
+                  ! call set_alphaS_vec(p1_cnt(0,1,0),1)
                calculatedBorn=.false.
-               call sborn_amp(p_born_coll,coll_amp2,coll_jamp2,coll_amp_split
-     $                    ,coll_amp_split_cnt,wgt_coll,coll_ans_cnt,coll_saveamp)
+               call sborn_amp_vec(p_born_coll,coll_amp2,coll_jamp2,coll_amp_split
+     $                    ,coll_amp_split_cnt,wgt_coll,coll_ans_cnt,coll_saveamp
+     $                    ,4*(FKS_configs - 1) + 2)
                scb_amp_split(:,iFKS,1)=coll_amp_split(:)
                scb_amp_split_cnt(:,:,:,iFKS,1)=coll_amp_split_cnt(:,:,:)
                scb_ans_cnt(:,:,iFKS,1)=coll_ans_cnt(:,:)
                scb_saveamp(:,:,iFKS,1)=coll_saveamp(:,:)
                calculatedBorn=.false.
-               call sborn_amp(p_born,nb_amp2,nb_jamp2,nb_amp_split
-     $                    ,nb_amp_split_cnt,wgt_nb,nb_ans_cnt,nb_saveamp)
+               call sborn_amp_vec(p_born,nb_amp2,nb_jamp2,nb_amp_split
+     $                    ,nb_amp_split_cnt,wgt_nb,nb_ans_cnt,nb_saveamp
+     $                    ,4*(FKS_configs - 1) + 2)
                snb_amp2(:,iFKS,1)=nb_amp2(:)
                snb_amp_split(:,iFKS,1)=nb_amp_split(:)
                snb_amp_split_cnt(:,:,:,iFKS,1)=nb_amp_split_cnt(:,:,:)
                snb_ans_cnt(:,:,iFKS,1)=nb_ans_cnt(:,:)
                snb_saveamp(:,:,iFKS,1)=nb_saveamp(:,:)
                calculatedBorn=.false.
-               call set_alphaS(p)
+               ! call set_alphaS(p)
+               ! call set_alphaS_vec(p,1)
                calculatedBorn=.false.
-               call sborn_amp(p_born_rot,rot_amp2,rot_jamp2,rot_amp_split
-     $                    ,rot_amp_split_cnt,wgt_rot,rot_ans_cnt,rot_saveamp)
+               call sborn_amp_vec(p_born_rot,rot_amp2,rot_jamp2,rot_amp_split
+     $                    ,rot_amp_split_cnt,wgt_rot,rot_ans_cnt,rot_saveamp
+     $                    ,4*(FKS_configs - 1) + 3)
                srot_amp_split(:,iFKS,1)=rot_amp_split(:)
                srot_amp_split_cnt(:,:,:,iFKS,1)=rot_amp_split_cnt(:,:,:)
                srot_ans_cnt(:,:,iFKS,1)=rot_ans_cnt(:,:)
                srot_saveamp(:,:,iFKS,1)=rot_saveamp(:,:)
                calculatedBorn=.false.
-               call sborn_amp(p_born_coll,coll_n1_amp2,coll_n1_jamp2,coll_n1_amp_split
-     $                    ,coll_n1_split_cnt,wgt_coll_n1,coll_n1_cnt,coll_n1_saveamp)
+               call sborn_amp_vec(p_born_coll,coll_n1_amp2,coll_n1_jamp2,coll_n1_amp_split
+     $                    ,coll_n1_split_cnt,wgt_coll_n1,coll_n1_cnt,coll_n1_saveamp
+     $                    ,4*(FKS_configs - 1) + 3)
                sc1_amp_split(:,iFKS,1)=coll_n1_amp_split(:)
                sc1_amp_split_cnt(:,:,:,iFKS,1)=coll_n1_split_cnt(:,:,:)
                sc1_ans_cnt(:,:,iFKS,1)=coll_n1_cnt(:,:)
                sc1_saveamp(:,:,iFKS,1)=coll_n1_saveamp(:,:)
                calculatedBorn=.false.
-               call sborn_amp(p_born,n1_amp2,n1_jamp2,n1_amp_split
-     $                    ,n1_amp_split_cnt,wgt_n1,n1_ans_cnt,n1_saveamp)
+               call sborn_amp_vec(p_born,n1_amp2,n1_jamp2,n1_amp_split
+     $                    ,n1_amp_split_cnt,wgt_n1,n1_ans_cnt,n1_saveamp
+     $                    ,4*(FKS_configs - 1) + 3)
                sn1_amp2(:,iFKS,1)=n1_amp2(:)
                sn1_jamp2(:,iFKS,1)=n1_jamp2(:)
                sn1_amp_split(:,iFKS,1)=n1_amp_split(:)
@@ -1035,17 +1026,18 @@ C ZW: Reset all the storage arrays
             ! endif
             ! if (passcuts_n1body) then
                call set_cms_stuff(mohdr)
-               call set_alphaS(p)
-               call smatrix_real(p,real_amp_split,fx_ev)
+               ! call set_alphaS(p)
+               ! call set_alphaS_vec(p,1)
+               call smatrix_real_vec(p,real_amp_split,fx_ev,4*(FKS_configs - 1) + 3)
                sreal_amp_split(:,iFKS,1)=real_amp_split(:)
                sfx_ev(iFKS,1)=fx_ev
             ! endif
          enddo
 
          
-         calculatedBorn=.false.
 c Pick the first one because that's the one with the soft singularity
          nFKS_picked_nbody=proc_map(proc_map(0,1),1)
+         nbody=.true.
          if (sum.eq.0) then
 c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
             nFKS_in=nFKS_picked_nbody
@@ -1059,17 +1051,17 @@ c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
          else
             jac=0.5d0
          endif
-c Also the Born needs to be included in the Importance Sampling over the
-c FKS configurations (for the shower scale) (multiply by
-c 1/proc_map(0,0)*vol1)
-         jac=jac/(proc_map(0,0)*vol1)
-         call generate_momenta(nndim,iconfig,jac,x,p)
+         p_born(:,:) = spb(:,:,0,1)
+         p1_cnt(:,:,0) = sp1_cnt(:,:,0,1)
          if (p_born(0,1).lt.0d0) goto 12
          ! p_born_nb(:,:) = p_born(:,:)
          passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
-         call set_alphaS(p1_cnt(0,1,0))
+         ! call set_alphaS(p1_cnt(0,1,0))
+         ! call set_alphaS_vec(p1_cnt(0,1,0),1)
          calculatedBorn=.false.
-         call sborn_amp(p_born,born_amp2,born_jamp2,born_amp_split,born_amp_split_cnt,wgt_born,born_ans_cnt,born_saveamp)
+         call sborn_amp_vec(p_born,born_amp2,born_jamp2,born_amp_split
+     $                     ,born_amp_split_cnt,wgt_born,born_ans_cnt,born_saveamp
+     $                     ,4*FKS_configs + 1)
 
          sborn_amp2(:,1)=born_amp2(:)
          sborn_jamp2(:,1)=born_jamp2(:)
@@ -1084,25 +1076,25 @@ c The nbody contributions
          nbody=.true.
 !          calculatedBorn=.false.
 ! c Pick the first one because that's the one with the soft singularity
-!          nFKS_picked_nbody=proc_map(proc_map(0,1),1)
-!          if (sum.eq.0) then
+         nFKS_picked_nbody=proc_map(proc_map(0,1),1)
+         if (sum.eq.0) then
 ! c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
-!             nFKS_in=nFKS_picked_nbody
-!             call get_born_nFKSprocess(nFKS_in,nFKS_out)
-!             nFKS_picked_nbody=nFKS_out
-!          endif
-!          call update_fks_dir(nFKS_picked_nbody)
-!          icolup_s(1,1)=-1 ! set colour connection to -1: i.e., complete_xmcsubt has not been called
-!          if (ini_fin_fks.eq.0) then
-!             jac=1d0
-!          else
-!             jac=0.5d0
-!          endif
+            nFKS_in=nFKS_picked_nbody
+            call get_born_nFKSprocess(nFKS_in,nFKS_out)
+            nFKS_picked_nbody=nFKS_out
+         endif
+         call update_fks_dir(nFKS_picked_nbody)
+         icolup_s(1,1)=-1 ! set colour connection to -1: i.e., complete_xmcsubt has not been called
+         if (ini_fin_fks.eq.0) then
+            jac=1d0
+         else
+            jac=0.5d0
+         endif
 ! c Also the Born needs to be included in the Importance Sampling over the
 ! c FKS configurations (for the shower scale) (multiply by
 ! c 1/proc_map(0,0)*vol1)
-!          jac=jac/(proc_map(0,0)*vol1)
-!          call generate_momenta(nndim,iconfig,jac,x,p)
+         jac=jac/(proc_map(0,0)*vol1)
+         call generate_momenta(nndim,iconfig,jac,x,p)
          if (p_born(0,1).lt.0d0) goto 12
          born_amp2(:)=sborn_amp2(:,1)
          born_jamp2(:)=sborn_jamp2(:,1)
@@ -1168,23 +1160,6 @@ c for different nFKSprocess.
 c Every contribution has to have a viable set of Born momenta (even if
 c counter-event momenta do not exist).
             if (p_born(0,1).lt.0d0) cycle
-            ! p_born_n1(:,:) = p_born(:,:)
-            ! p_born_diff(:,:) = p_born_n1(:,:) - p_born_nb(:,:)
-            ! sum_diff=0d0
-            ! do j=0,3
-            !    do k=1,nexternal-1
-            !       sum_diff=sum_diff+abs(p_born_diff(j,k))
-            !    enddo
-            ! enddo
-C ZW: checked to see if p_born are the same for n and n+1 body kinematics
-C Seems to always be the case
-C Check with Rikk if this is a valid assumption
-            ! if (sum_diff.gt.1d-10) then
-            !    write(*,*) 'Warning: Born momenta differ between n and n+1'
-            !    write(*,*) ' FKS proc ',iFKS,' sum_diff=',sum_diff
-            ! endif
-            ! write(*,*) "RBODY CONTRIBUTION for FKS proc ",iFKS
-            ! write(*,*) p_born(:,:)
 c Compute the n1-body prefactors
             call compute_prefactors_n1body(vegas_wgt,jac)
 c Set the shower scales            
@@ -1310,9 +1285,6 @@ c Include the real-emission contribution.
                call set_alphaS(p)
                call include_multichannel_enhance(2,n1_amp2,ev_amp2,norad_amp2)
                sudakov_damp=probne
-               ! call smatrix_real(p,real_amp_split,fx_ev)
-               ! real_amp_split(:)=sreal_amp_split(:,iFKS,1)
-               ! fx_ev=sfx_ev(iFKS,1)
                call sreal_store(p,xi_i_fks_ev,y_ij_fks_ev,fx_ev,ret_amp_split
      $              ,real_amp_split
      $              ,n1_amp_split,n1_ans_cnt,n1_amp_split_cnt,n1_saveamp
@@ -1354,6 +1326,15 @@ c determined which contributions are identical.
          call fill_mint_function_NLOPS(f,n1body_wgt)
          call fill_MC_integer(1,proc_map(0,1),n1body_wgt*vol1)
       endif
+      return
+      end
+
+
+      subroutine scattering_amplitudes_vec(vector_size)
+      use driver
+      implicit none
+      integer vector_size
+      integer i
       return
       end
 
