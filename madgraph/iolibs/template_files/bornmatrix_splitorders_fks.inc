@@ -1049,7 +1049,7 @@ C ----------
         !if (nhel(glu_ij,ihel).EQ.NHEL(GLU_IJ,1).or.skip(nfksprocess).eq.0) then
         if (cond_ij) then
           IF ((GOODHEL(IHEL,nFKSprocess) .OR. GOODHEL(IHEL+SKIP(nFKSprocess),nFKSprocess) .OR. NTRY(nFKSprocess) .LT. 2) ) THEN
-            CALL BORN(P1,NHEL(1,IHEL),IHEL,.false.,AMP2,JAMP2,T,borns,ret_saveamp)
+            CALL BORN_VEC(P1,NHEL(1,IHEL),IHEL,.false.,AMP2,JAMP2,T,borns,ret_saveamp,ivec)
             DO I=1,NSQAMPSO
                 ANS(1,I)=ANS(1,I)+T(1,I)
                 ANS(2,I)=ANS(2,I)+T(2,I)

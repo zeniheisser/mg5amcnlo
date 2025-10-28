@@ -8635,7 +8635,6 @@ C
 
         for coupling in data:
             if dp:  
-
                 fsock.writelines('%(name)s%(index)s = %(expr)s' % {'name': coupling.name+'_vec',
                                           'index': '(vecid)',
                                           'expr': self.p_to_f.parse(coupling.expr)})
