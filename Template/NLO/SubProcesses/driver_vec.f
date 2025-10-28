@@ -132,6 +132,8 @@ C Included files for process information
         include 'born_nhel.inc'
       logical calculatedBorn
       common/ccalculatedBorn/calculatedBorn
+      logical       nbody
+      common/cnbody/nbody
 C Momenta
         double precision p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
         double precision pswgt_cnt(-2:2),jac_cnt(-2:2)
@@ -186,13 +188,7 @@ C Real variables
       double precision zero, one
       parameter (zero=0d0,one=1d0)
       double precision real_amp_split(amp_split_size)
-      double precision fx_ev, fx_s, fx_c, fx_sc
-      double precision deg_xi_c, deg_lxi_c, deg_xi_sc, deg_lxi_sc
-      double precision    xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3)
-     $                    ,p_i_fks_cnt(0:3,-2:2)
-      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
-      double precision   xi_i_fks_cnt(-2:2)
-      common /cxiifkscnt/xi_i_fks_cnt
+      double precision fx_ev
 C n+1-kinematic borns
       double precision n1_amp2(ngraphs), n1_jamp2(0:ncolor)
       double precision rot_amp2(ngraphs), rot_jamp2(0:ncolor)
@@ -219,7 +215,7 @@ C Born-like variables for FKS sector dependent contributions
       double precision wgt_nb
 C Arguments
         integer proc_map(0:fks_configs,0:fks_configs)
-        double precision x(99), rwgt, vol1
+        double precision  rwgt
         integer vector_size, sum, iconfig
         logical skip_iter
 
@@ -302,6 +298,18 @@ C Arguments
          enddo
 
          
+         
+         nbody=.true.
+!          calculatedBorn=.false.
+! c Pick the first one because that's the one with the soft singularity
+         nFKS_picked_nbody=proc_map(proc_map(0,1),1)
+         if (sum.eq.0) then
+! c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
+            nFKS_in=nFKS_picked_nbody
+            call get_born_nFKSprocess(nFKS_in,nFKS_out)
+            nFKS_picked_nbody=nFKS_out
+         endif
+         call update_fks_dir(nFKS_picked_nbody)
 c Pick the first one because that's the one with the soft singularity
          p_born(:,:) = spb(:,:,0,1)
          p1_cnt(:,:,0) = sp1_cnt(:,:,0,1)
