@@ -688,6 +688,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'driver_mintMC.f',
                      'driver_mintFO.f',
                      'driver.f90',
+                     'driver_vec.f',
                      'pineappl_interface.cc',
                      'pineappl_interface_dummy.f',
                      'pineappl_common.inc',

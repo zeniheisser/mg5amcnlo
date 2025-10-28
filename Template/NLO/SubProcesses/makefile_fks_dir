@@ -59,7 +59,8 @@ FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) 			\
 	 cluster.o splitorders_stuff.o 			\
 	 get_color.o iproc_map.o sudakov.o				\
 	 MC_integer.o $(reweight_xsec_events_pdf_dummy)			\
-	 $(pineappl_interface) weight_lines.o mint_module.o polfit.o
+	 $(pineappl_interface) weight_lines.o mint_module.o polfit.o \
+	 driver_vec.o 
 
 FILESSUD= \
          $(patsubst %.f,%.o,$(wildcard  ewsudakov*.f)) 			\
