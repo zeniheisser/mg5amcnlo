@@ -298,19 +298,7 @@ C Arguments
             ! endif
          enddo
 
-         
-         
-         nbody=.true.
-!          calculatedBorn=.false.
-! c Pick the first one because that's the one with the soft singularity
-         nFKS_picked_nbody=proc_map(proc_map(0,1),1)
-         if (sum.eq.0) then
-! c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
-            nFKS_in=nFKS_picked_nbody
-            call get_born_nFKSprocess(nFKS_in,nFKS_out)
-            nFKS_picked_nbody=nFKS_out
-         endif
-         call update_fks_dir(nFKS_picked_nbody)
+
 c Pick the first one because that's the one with the soft singularity
          p_born(:,:) = spb(:,:,0,1)
          p1_cnt(:,:,0) = sp1_cnt(:,:,0,1)
