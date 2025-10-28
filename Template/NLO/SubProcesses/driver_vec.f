@@ -267,10 +267,11 @@ C Arguments
                call sborn_amp_vec(p_born_rot,rot_amp2,rot_jamp2,rot_amp_split
      $                    ,rot_amp_split_cnt,wgt_rot,rot_ans_cnt,rot_saveamp
      $                    ,4*(FKS_configs - 1) + 4)
-               srot_amp_split(:,iFKS,1)=rot_amp_split(:)
+               srot_jamp2(:,iFKS,1)=rot_jamp2(:)
+               ! srot_amp_split(:,iFKS,1)=rot_amp_split(:)
                srot_amp_split_cnt(:,:,:,iFKS,1)=rot_amp_split_cnt(:,:,:)
                srot_ans_cnt(:,:,iFKS,1)=rot_ans_cnt(:,:)
-               srot_saveamp(:,:,iFKS,1)=rot_saveamp(:,:)
+               ! srot_saveamp(:,:,iFKS,1)=rot_saveamp(:,:)
                calculatedBorn=.false.
                call sborn_amp_vec(p_born_coll,coll_n1_amp2,coll_n1_jamp2,coll_n1_amp_split
      $                    ,coll_n1_split_cnt,wgt_coll_n1,coll_n1_cnt,coll_n1_saveamp

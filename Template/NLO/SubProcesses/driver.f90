@@ -27,10 +27,11 @@ module driver
     double complex, allocatable, public :: sc1_amp_split_cnt(:,:,:,:,:)
     double complex, allocatable, public :: sc1_saveamp(:,:,:,:)
   ! Store storage for rotated Borns
+    double precision, allocatable, public :: srot_jamp2(:,:,:)
     complex*16, allocatable, public :: srot_ans_cnt(:,:,:,:)
-    double precision, allocatable, public :: srot_amp_split(:,:,:)
+    ! double precision, allocatable, public :: srot_amp_split(:,:,:)
     double complex, allocatable, public :: srot_amp_split_cnt(:,:,:,:,:)
-    double complex, allocatable, public :: srot_saveamp(:,:,:,:)
+    ! double complex, allocatable, public :: srot_saveamp(:,:,:,:)
 ! norad and ev amplitudes
     double precision, allocatable, public :: snorad_amp2(:,:,:)
     double precision, allocatable, public :: sev_amp2(:,:,:)
@@ -91,10 +92,11 @@ module driver
     allocate(sc1_amp_split_cnt(amp_split_size,2,nsplitorders,FKS_configs,vector_size))
     allocate(sc1_saveamp(ngraphs,max_bhel,FKS_configs,vector_size))
    ! Store storage for rotated Borns
+    allocate(srot_jamp2(0:ncolor,FKS_configs,vector_size))
     allocate(srot_ans_cnt(2,nsplitorders,FKS_configs,vector_size))
-    allocate(srot_amp_split(amp_split_size,FKS_configs,vector_size))
+    ! allocate(srot_amp_split(amp_split_size,FKS_configs,vector_size))
     allocate(srot_amp_split_cnt(amp_split_size,2,nsplitorders,FKS_configs,vector_size))
-    allocate(srot_saveamp(ngraphs,max_bhel,FKS_configs,vector_size))
+    ! allocate(srot_saveamp(ngraphs,max_bhel,FKS_configs,vector_size))
    ! norad and ev amplitudes
     allocate(snorad_amp2(ngraphs,FKS_configs,vector_size))
     allocate(sev_amp2(ngraphs,FKS_configs,vector_size))
@@ -150,10 +152,11 @@ subroutine reset_storage()
     sc1_amp_split_cnt(:,:,:,:,:) = (0d0,0d0)
     sc1_saveamp(:,:,:,:) = (0d0,0d0)
    ! Store storage for rotated Borns
+    srot_jamp2(:,:,:) = 0d0
     srot_ans_cnt(:,:,:,:) = (0d0,0d0)
-    srot_amp_split(:,:,:) = 0d0
+    ! srot_amp_split(:,:,:) = 0d0
     srot_amp_split_cnt(:,:,:,:,:) = (0d0,0d0)
-    srot_saveamp(:,:,:,:) = (0d0,0d0)
+    ! srot_saveamp(:,:,:,:) = (0d0,0d0)
   ! norad and ev amplitudes
     snorad_amp2(:,:,:) = 0d0
     sev_amp2(:,:,:) = 0d0
@@ -207,10 +210,11 @@ subroutine deallocate_storage()
     if (allocated(sc1_amp_split_cnt)) deallocate(sc1_amp_split_cnt)
     if (allocated(sc1_saveamp)) deallocate(sc1_saveamp)
     ! Store storage for rotated Borns
+    if (allocated(srot_jamp2)) deallocate(srot_jamp2)
     if (allocated(srot_ans_cnt)) deallocate(srot_ans_cnt)
-    if (allocated(srot_amp_split)) deallocate(srot_amp_split)
+    ! if (allocated(srot_amp_split)) deallocate(srot_amp_split)
     if (allocated(srot_amp_split_cnt)) deallocate(srot_amp_split_cnt)
-    if (allocated(srot_saveamp)) deallocate(srot_saveamp)
+    ! if (allocated(srot_saveamp)) deallocate(srot_saveamp)
     ! norad and ev amplitudes
     if (allocated(snorad_amp2)) deallocate(snorad_amp2)
     if (allocated(sev_amp2)) deallocate(sev_amp2)
