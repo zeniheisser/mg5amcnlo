@@ -119,7 +119,7 @@ c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
       end
 
 
-      subroutine amplitudes_vec(proc_map,vector_size,skip_iter)
+      subroutine amplitudes_vec(proc_map,rwgt,vector_size,skip_iter)
         use driver
         implicit none
 C Included files for process information
