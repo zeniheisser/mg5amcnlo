@@ -881,9 +881,6 @@ C ZW: Reset all the storage arrays
 
          call generate_momenta_vec(iconfig,sum,proc_map,x,rwgt,vol1,1)
 
-         call amplitudes_vec(proc_map,rwgt,1,skip_iter)
-         if (skip_iter) goto 12
-
 
 c The nbody contributions
          if (abrv.eq.'real') goto 11
@@ -897,6 +894,11 @@ c The nbody contributions
             call get_born_nFKSprocess(nFKS_in,nFKS_out)
             nFKS_picked_nbody=nFKS_out
          endif
+
+         call amplitudes_vec(proc_map,rwgt,1,nFKS_picked_nbody,skip_iter)
+         if (skip_iter) goto 12
+
+
          call update_fks_dir(nFKS_picked_nbody)
          icolup_s(1,1)=-1 ! set colour connection to -1: i.e., complete_xmcsubt has not been called
          if (ini_fin_fks.eq.0) then

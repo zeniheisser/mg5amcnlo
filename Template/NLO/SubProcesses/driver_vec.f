@@ -119,7 +119,7 @@ c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
       end
 
 
-      subroutine amplitudes_vec(proc_map,rwgt,vector_size,skip_iter)
+      subroutine amplitudes_vec(proc_map,rwgt,vector_size,nFKS_nbody,skip_iter)
         use driver
         implicit none
 C Included files for process information
@@ -216,14 +216,14 @@ C Born-like variables for FKS sector dependent contributions
 C Arguments
         integer proc_map(0:fks_configs,0:fks_configs)
         double precision  rwgt
-        integer vector_size, sum, iconfig
+        integer vector_size, nFKS_nbody
         logical skip_iter
 
         skip_iter = .false.
 
         do i=1,proc_map(proc_map(0,1),0)
             iFKS=proc_map(proc_map(0,1),i)
-            call update_fks_dir(iFKS)
+C            call update_fks_dir(iFKS)
             p_born(:,:)=spb(:,:,iFKS,1)
             p_born_ev(:,:)=spb_ev(:,:,iFKS,1)
             p_born_norad(:,:)=spb_norad(:,:,iFKS,1)
@@ -239,17 +239,17 @@ C Arguments
                calculatedBorn=.false.
                call sborn_amp_vec(p_born_ev,ev_amp2,ev_jamp2,ev_amp_split
      $                    ,ev_amp_split_cnt,wgt_ev,ev_ans_cnt,ev_saveamp
-     $                    ,4*(FKS_configs - 1)+1)
+     $                    ,4*(FKS_configs - 1)+1,iFKS)
                sev_amp2(:,iFKS,1)=ev_amp2(:)
                calculatedBorn=.false.
                call sborn_amp_vec(p_born_norad,norad_amp2,norad_jamp2,norad_amp_split
      $                    ,norad_amp_split_cnt,wgt_norad,norad_ans_cnt,norad_saveamp
-     $                    ,4*(FKS_configs - 1) + 2)
+     $                    ,4*(FKS_configs - 1) + 2,iFKS)
                snorad_amp2(:,iFKS,1)=norad_amp2(:)
                calculatedBorn=.false.
                call sborn_amp_vec(p_born_coll,coll_amp2,coll_jamp2,coll_amp_split
      $                    ,coll_amp_split_cnt,wgt_coll,coll_ans_cnt,coll_saveamp
-     $                    ,4*(FKS_configs - 1) + 3)
+     $                    ,4*(FKS_configs - 1) + 3,iFKS)
                scb_amp_split(:,iFKS,1)=coll_amp_split(:)
                scb_amp_split_cnt(:,:,:,iFKS,1)=coll_amp_split_cnt(:,:,:)
                scb_ans_cnt(:,:,iFKS,1)=coll_ans_cnt(:,:)
@@ -257,7 +257,7 @@ C Arguments
                calculatedBorn=.false.
                call sborn_amp_vec(p_born,nb_amp2,nb_jamp2,nb_amp_split
      $                    ,nb_amp_split_cnt,wgt_nb,nb_ans_cnt,nb_saveamp
-     $                    ,4*(FKS_configs - 1) + 3)
+     $                    ,4*(FKS_configs - 1) + 3,iFKS)
                snb_amp2(:,iFKS,1)=nb_amp2(:)
                snb_amp_split(:,iFKS,1)=nb_amp_split(:)
                snb_amp_split_cnt(:,:,:,iFKS,1)=nb_amp_split_cnt(:,:,:)
@@ -266,16 +266,16 @@ C Arguments
                calculatedBorn=.false.
                call sborn_amp_vec(p_born_rot,rot_amp2,rot_jamp2,rot_amp_split
      $                    ,rot_amp_split_cnt,wgt_rot,rot_ans_cnt,rot_saveamp
-     $                    ,4*(FKS_configs - 1) + 4)
+     $                    ,4*(FKS_configs - 1) + 4,iFKS)
                srot_jamp2(:,iFKS,1)=rot_jamp2(:)
                ! srot_amp_split(:,iFKS,1)=rot_amp_split(:)
                srot_amp_split_cnt(:,:,:,iFKS,1)=rot_amp_split_cnt(:,:,:)
                srot_ans_cnt(:,:,iFKS,1)=rot_ans_cnt(:,:)
                ! srot_saveamp(:,:,iFKS,1)=rot_saveamp(:,:)
-               calculatedBorn=.false.
+               ! calculatedBorn=.false.
                call sborn_amp_vec(p_born_coll,coll_n1_amp2,coll_n1_jamp2,coll_n1_amp_split
      $                    ,coll_n1_split_cnt,wgt_coll_n1,coll_n1_cnt,coll_n1_saveamp
-     $                    ,4*(FKS_configs - 1) + 4)
+     $                    ,4*(FKS_configs - 1) + 4,iFKS)
                sc1_amp_split(:,iFKS,1)=coll_n1_amp_split(:)
                sc1_amp_split_cnt(:,:,:,iFKS,1)=coll_n1_split_cnt(:,:,:)
                sc1_ans_cnt(:,:,iFKS,1)=coll_n1_cnt(:,:)
@@ -283,7 +283,7 @@ C Arguments
                calculatedBorn=.false.
                call sborn_amp_vec(p_born,n1_amp2,n1_jamp2,n1_amp_split
      $                    ,n1_amp_split_cnt,wgt_n1,n1_ans_cnt,n1_saveamp
-     $                    ,4*(FKS_configs - 1) + 4)
+     $                    ,4*(FKS_configs - 1) + 4,iFKS)
                sn1_amp2(:,iFKS,1)=n1_amp2(:)
                sn1_jamp2(:,iFKS,1)=n1_jamp2(:)
                sn1_amp_split(:,iFKS,1)=n1_amp_split(:)
@@ -292,7 +292,7 @@ C Arguments
                sn1_saveamp(:,:,iFKS,1)=n1_saveamp(:,:)
             ! endif
             ! if (passcuts_n1body) then
-               call smatrix_real_vec(p,real_amp_split,fx_ev,4*(FKS_configs - 1) + 4)
+               call smatrix_real_vec(p,real_amp_split,fx_ev,4*(FKS_configs - 1) + 4, iFKS)
                sreal_amp_split(:,iFKS,1)=real_amp_split(:)
                sfx_ev(iFKS,1)=fx_ev
             ! endif
@@ -309,7 +309,7 @@ c Pick the first one because that's the one with the soft singularity
          calculatedBorn=.false.
          call sborn_amp_vec(p_born,born_amp2,born_jamp2,born_amp_split
      $                     ,born_amp_split_cnt,wgt_born,born_ans_cnt,born_saveamp
-     $                     ,4*FKS_configs + 1)
+     $                     ,4*FKS_configs + 1,nFKS_nbody)
 
          sborn_amp2(:,1)=born_amp2(:)
          sborn_jamp2(:,1)=born_jamp2(:)

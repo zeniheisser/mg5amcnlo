@@ -5167,7 +5167,7 @@ C  (when not doing event projection).
 C For the soft-collinear one, use p_born
       if (xi_i_fks.gt.0d0.and..not.use_evpr) then
           p_born_used(:,:) = p_born_coll(:,:)
-          call sborn_amp(p_born_used,amp2,jamp2,ret_amp_split,ret_amp_split_cnt,wgt_born,ans_cnt,ret_saveamp)
+C          call sborn_amp(p_born_used,amp2,jamp2,ret_amp_split,ret_amp_split_cnt,wgt_born,ans_cnt,ret_saveamp)
       else ! if (xi_i_fks.eq.0d0) then
           p_born_used(:,:) = p_born(:,:)
       endif
@@ -7532,6 +7532,7 @@ C setup the fks i/j info
          call fks_inc_chooser()
 C the following call to born is to setup the goodhel(nfksprocess)
 C ZW: should be removed when initital tests are separated from evaluations
+         calculatedBorn = .false.
          call sborn_amp(p_born,amp2,jamp2,ret_amp_split,ret_amp_split_cnt,wgt1,ans_cnt,ret_saveamp)
          contr=0d0
          do i=1,fks_j_from_i(i_fks,0)
@@ -7576,6 +7577,7 @@ c convert to Binoth Les Houches Accord standards
       virt_wgt=0d0
 
 C      call sborn_amp(p_born, amp2, jamp2, ret_amp_split, ret_amp_split_cnt, wgt1, ans_cnt, ret_saveamp)
+      ret_amp_split_cnt(:,:,:) = born_split_cnt(:,:,:)
       ! use the amp_split_cnt as the born to approximate the virtual
       ! check which one of the two (QCD, QED) is !=0
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
@@ -7599,7 +7601,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
          if ((ran2().le.virtual_fraction(ichan) .and.
      $        abrv(1:3).ne.'nov').or.abrv(1:4).eq.'virt') then
             call cpu_time(tBefore)
-            Call BinothLHA(p_born,born_wgt,virt_wgt,ret_amp_split,ret_saveamp,amp_split_finite_ML)
+            Call BinothLHA(p_born,born_wgt,virt_wgt,ret_amp_split,ret_saveamp,amp_split_finite_ML,ret_amp_split_cnt)
             do iamp=1,amp_split_size
                amp_split_virt(iamp)=amp_split_finite_ML(iamp)
             enddo
@@ -7791,7 +7793,7 @@ C         call sborn_amp(p_born,amp2,jamp2,ret_amp_split,ret_amp_split_cnt,wgt1,
          print*,"           "
          write(*,123)((p(i,j),i=0,3),j=1,nexternal)
          xmu2=q2fact(1)
-         call getpoles(p,xmu2,double,single,fksprefact)
+         call getpoles(p,xmu2,double,single,fksprefact,ret_amp_split_cnt)
          print*,"BORN",born_wgt!/conv
          print*,"DOUBLE",double
          print*,"SINGLE",single
@@ -8046,7 +8048,7 @@ c
       END
 
 
-      subroutine getpoles(p,xmu2,double,single,fksprefact)
+      subroutine getpoles(p,xmu2,double,single,fksprefact,ret_amp_split_cnt)
 c Returns the residues of double and single poles according to 
 c eq.(B.1) and eq.(B.2) if fksprefact=.true.. When fksprefact=.false.,
 c the prefactor (mu2/Q2)^ep in eq.(B.1) is expanded, and giving an
@@ -8089,12 +8091,15 @@ c      include "fks.inc"
       double precision amp2(ngraphs), jamp2(0:ncolor)
       complex*16 ans_cnt(2, nsplitorders)
       DOUBLE PRECISION DUMMY_AMP_SPLIT(AMP_SPLIT_SIZE)
+      DOUBLE COMPLEX RET_AMP_SPLIT_CNT(AMP_SPLIT_SIZE,2,NSPLITORDERS)
       DOUBLE COMPLEX DUMMY_AMP_SPLIT_CNT(AMP_SPLIT_SIZE,2,NSPLITORDERS)
       double complex ret_saveamp(ngraphs,max_bhel)
 
 c      common /c_born_cnt/ ans_cnt
       logical need_color_links, need_charge_links
       common /c_need_links/need_color_links, need_charge_links
+      logical calculatedBorn
+      common /ccalculatedBorn/ calculatedBorn
       double precision oneo8pi2
       parameter(oneo8pi2 = 1d0/(8d0*pi**2))
       include "nFKSconfigs.inc"
@@ -8136,7 +8141,8 @@ C links
       enddo
       aso2pi=g**2/(8d0*pi**2)
       aeo2pi=dble(gal(1))**2/(8d0*pi**2)
-      call sborn_amp(p_born,amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,wgt1,ans_cnt,ret_saveamp)
+C      call sborn_amp(p_born,amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,wgt1,ans_cnt,ret_saveamp)
+      dummy_amp_split_cnt(:,:,:) = ret_amp_split_cnt(:,:,:)
 c QCD Born terms
       contr1 = 0d0
       contr2 = 0d0
@@ -8214,6 +8220,7 @@ c Colour and charge-linked Born terms
 C setup the fks i/j info
         call fks_inc_chooser()
 C the following call to born is to setup the goodhel(nfksprocess)
+        calculatedBorn = .false.
         call sborn_amp(p_born,amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,wgt1,ans_cnt,ret_saveamp)
 
         contr1=0d0

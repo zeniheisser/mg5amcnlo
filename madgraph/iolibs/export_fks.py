@@ -1816,7 +1816,7 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
             """ 
         # the real me wrapper
         text_vec = \
-            """subroutine smatrix_real_vec(p, ret_amp_split, wgt, ivec)
+            """subroutine smatrix_real_vec(p, ret_amp_split, wgt, ivec, nfksprocess)
             implicit none
             include 'nexternal.inc'
             include 'orders.inc'
@@ -1825,7 +1825,6 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
             double precision wgt
             integer ivec
             integer nfksprocess
-            common/c_nfksprocess/nfksprocess
             """ 
         # the pdf wrapper
         text1 = \

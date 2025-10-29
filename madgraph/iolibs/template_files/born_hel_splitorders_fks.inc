@@ -96,18 +96,18 @@ C ----------
 C BEGIN CODE
 C ----------
       iden=iden_values(nfksprocess)
-      if (calculatedBorn) then
-         do j=1,nexternal-1
-            if (savemom(j,1).ne.p1(0,j) .or. savemom(j,2).ne.p1(3,j)) then
-               calculatedBorn=.false.
-               write(*,*) 'Error in sborn_hel_splitorders: momenta not the same in the born'
-               stop
-            endif
-         enddo
-      else
-         write(*,*) 'Error in sborn_hel_splitorders: this should be called only with calculatedborn = true'
-         stop
-      endif
+C      if (calculatedBorn) then
+C         do j=1,nexternal-1
+C            if (savemom(j,1).ne.p1(0,j) .or. savemom(j,2).ne.p1(3,j)) then
+C               calculatedBorn=.false.
+C               write(*,*) 'Error in sborn_hel_splitorders: momenta not the same in the born'
+C               stop
+C            endif
+C         enddo
+C      else
+C         write(*,*) 'Error in sborn_hel_splitorders: this should be called only with calculatedborn = true'
+C         stop
+C      endif
       DO I=0,NSQAMPSO
           ANS(I) = 0D0
       ENDDO
@@ -182,14 +182,14 @@ C
 C ----------
 C BEGIN CODE
 C ----------
-      if (.not. calculatedBorn) then
-        write(*,*) 'Error in b_sf: color_linked borns should be called only with calculatedborn = true'
-        stop
-      elseif (calculatedBorn) then
+C      if (.not. calculatedBorn) then
+C        write(*,*) 'Error in b_sf: color_linked borns should be called only with calculatedborn = true'
+C        stop
+C      elseif (calculatedBorn) then
       do i=1,ngraphs
          amp(i)=loc_saveamp(i,hell)
       enddo
-      endif
+C      endif
 %(jamp_lines)s
     DO I = 1, NSQAMPSO
     ANS(I) = 0d0

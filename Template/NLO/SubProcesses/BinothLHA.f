@@ -1,4 +1,5 @@
-      subroutine BinothLHA(p,born_wgt,virt_wgt,amp_split_born,loc_saveamp,amp_split_finite_ML)
+      subroutine BinothLHA(p,born_wgt,virt_wgt,amp_split_born,loc_saveamp
+     $    ,amp_split_finite_ML,born_amp_split_cnt)
 c
 c Given the Born momenta, this is the Binoth-Les Houches interface file
 c that calls the OLP and returns the virtual weights. For convenience
@@ -66,6 +67,7 @@ c statistics for MadLoop
       integer amp_orders(nsplitorders)
       integer split_amp_orders(nsplitorders), iamp
       double precision amp_split_finite_ML(amp_split_size)
+      double complex born_amp_split_cnt(amp_split_size,2,nsplitorders)
 C      common /to_amp_split_finite/amp_split_finite_ML
       double precision prec_found(amp_split_size)
       double precision amp_split_poles_ML(amp_split_size,2),
@@ -309,7 +311,7 @@ c MadLoop initialization PS points.
       ret_code_common=ret_code
       if ((firsttime .or. mc_hel.eq.0) .and. mod(ret_code,100)/10.ne.3
      $     .and. mod(ret_code,100)/10.ne.4) then
-         call getpoles(p,QES2,madfks_double,madfks_single,fksprefact)
+         call getpoles(p,QES2,madfks_double,madfks_single,fksprefact,born_amp_split_cnt)
          polecheck_passed = .true.
          ! loop over the full result and each of the amp_split
          ! contribution

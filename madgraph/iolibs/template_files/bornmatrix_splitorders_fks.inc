@@ -192,7 +192,7 @@ C AMP_SPLIT_CNT(:,:,:) = RET_AMP_SPLIT_CNT(:,:,:)
 END
 
 
-      SUBROUTINE SBORN_AMP_VEC(P,AMP2,JAMP2,RET_AMP_SPLIT,RET_AMP_SPLIT_CNT,ANS_SUMMED,ANS_CNT,RET_SAVEAMP,ivec)
+      SUBROUTINE SBORN_AMP_VEC(P,AMP2,JAMP2,RET_AMP_SPLIT,RET_AMP_SPLIT_CNT,ANS_SUMMED,ANS_CNT,RET_SAVEAMP,ivec,ifks)
 C  
 %(info_lines)s
 C
@@ -226,7 +226,7 @@ C
       DOUBLE PRECISION RET_AMP_SPLIT(AMP_SPLIT_SIZE)
       DOUBLE COMPLEX RET_AMP_SPLIT_CNT(AMP_SPLIT_SIZE,2,NSPLITORDERS)
       double complex ret_saveamp(ngraphs,max_bhel)
-      integer ivec
+      integer ivec, ifks
 
 C
 C VARIABLES
@@ -266,7 +266,7 @@ if (firsttime) then
   call FIRSTTIME_SETUP(firsttime)
 endif
 
-CALL SBORN_SPLITORDERS_VEC(P,AMP2B,JAMP2B,ANS,ret_saveamp,ivec)
+CALL SBORN_SPLITORDERS_VEC(P,AMP2B,JAMP2B,ANS,ret_saveamp,ivec,ifks)
 
 C the born to be integrated
 ans_summed = 0d0
@@ -678,7 +678,7 @@ C ----------
 
 
 
-SUBROUTINE SBORN_SPLITORDERS_VEC(P1,AMP2,JAMP2,ANS,RET_SAVEAMP,IVEC)
+SUBROUTINE SBORN_SPLITORDERS_VEC(P1,AMP2,JAMP2,ANS,RET_SAVEAMP,IVEC,IFKS)
 C  
 %(info_lines)s
 C
@@ -708,7 +708,7 @@ C
       REAL*8 P1(0:3,NEXTERNAL-1)
       Double Precision amp2(ngraphs), jamp2(0:%(ncolor)d,0:NAMPSO)
       COMPLEX*16 ANS(2,0:NSQAMPSO)
-      integer ivec
+      integer ivec,ifks
 C  
 C LOCAL VARIABLES 
 C  
@@ -740,10 +740,10 @@ C
 C ----------
 C BEGIN CODE
 C ----------
-      iden=iden_values(nfksprocess)
-      glu_ij = ij_values(nfksprocess)
-      if(DO_TRY(nFKSprocess)) then
-        call SBORN_SPLITORDERS_NTRY_VEC(P1,AMP2,JAMP2,ANS,RET_SAVEAMP,DO_TRY(nFKSprocess),IVEC)
+      iden=iden_values(ifks)
+      glu_ij = ij_values(ifks)
+      if(DO_TRY(ifks)) then
+        call SBORN_SPLITORDERS_NTRY_VEC(P1,AMP2,JAMP2,ANS,RET_SAVEAMP,DO_TRY(ifks),IVEC,IFKS)
       else
       DO JJ=1,NGRAPHS
           amp2(jj)=0d0
@@ -753,34 +753,34 @@ C ----------
           jamp2(jj,I)=0d0
       ENDDO
       ENDDO
-      if (calculatedBorn) then
-         do j=1,nexternal-1
-            if (savemom(j,1).ne.p1(0,j) .or. savemom(j,2).ne.p1(3,j)) then
-               calculatedBorn=.false.
-               write (*,*) "momenta not the same in Born"
-	       stop
-            endif
-         enddo
-      endif
-      if (.not.calculatedBorn) then
-         do j=1,nexternal-1
-            savemom(j,1)=p1(0,j)
-            savemom(j,2)=p1(3,j)
-         enddo
+C      if (calculatedBorn) then
+C         do j=1,nexternal-1
+C            if (savemom(j,1).ne.p1(0,j) .or. savemom(j,2).ne.p1(3,j)) then
+C               calculatedBorn=.false.
+C               write (*,*) "momenta not the same in Born"
+C	       stop
+C            endif
+C         enddo
+C      endif
+C      if (.not.calculatedBorn) then
+C         do j=1,nexternal-1
+C            savemom(j,1)=p1(0,j)
+C            savemom(j,2)=p1(3,j)
+C         enddo
          ret_saveamp(:,:) = (0d0,0d0)
-      endif
+C      endif
       DO I=0,NSQAMPSO
           ANS(1,I) = 0D0
           ANS(2,I) = 0D0
       ENDDO
       DO IHEL=1,NCOMB
         ! the following lines are to avoid segfaults when glu_ij=0
-        cond_ij=skip(nfksprocess).eq.0
+        cond_ij=skip(ifks).eq.0
         if (.not.cond_ij) cond_ij=cond_ij.or.nhel(glu_ij,ihel).EQ.NHEL(GLU_IJ,1)
-        !if (nhel(glu_ij,ihel).EQ.NHEL(GLU_IJ,1).or.skip(nfksprocess).eq.0) then
+        !if (nhel(glu_ij,ihel).EQ.NHEL(GLU_IJ,1).or.skip(ifks).eq.0) then
         if (cond_ij) then
-          IF ((GOODHEL(IHEL,nFKSprocess) .OR. GOODHEL(IHEL+SKIP(nFKSprocess),nFKSprocess)) ) THEN
-            CALL BORN_VEC(P1,NHEL(1,IHEL),IHEL,.false.,AMP2,JAMP2,T,borns,ret_saveamp,ivec)
+          IF ((GOODHEL(IHEL,ifks) .OR. GOODHEL(IHEL+SKIP(ifks),ifks)) ) THEN
+            CALL BORN_VEC(P1,NHEL(1,IHEL),IHEL,.false.,AMP2,JAMP2,T,borns,ret_saveamp,ivec,ifks)
             DO I=1,NSQAMPSO
                 ANS(1,I)=ANS(1,I)+T(1,I)
                 ANS(2,I)=ANS(2,I)+T(2,I)
@@ -794,7 +794,7 @@ C ----------
       ANS(1,0)=ANS(1,0)+ANS(1,I)
       ANS(2,0)=ANS(2,0)+ANS(2,I)
       ENDDO
-      calculatedBorn=.true.
+C      calculatedBorn=.true.
       endif
       END
 
@@ -937,7 +937,7 @@ C ----------
       END
 
 
-      SUBROUTINE SBORN_SPLITORDERS_NTRY_VEC(P1,AMP2,JAMP2,ANS,RET_SAVEAMP,DO_TRY,IVEC)
+      SUBROUTINE SBORN_SPLITORDERS_NTRY_VEC(P1,AMP2,JAMP2,ANS,RET_SAVEAMP,DO_TRY,IVEC,IFKS)
 C  
 %(info_lines)s
 C
@@ -967,7 +967,7 @@ C
       REAL*8 P1(0:3,NEXTERNAL-1)
       Double Precision amp2(ngraphs), jamp2(0:%(ncolor)d,0:NAMPSO)
       COMPLEX*16 ANS(2,0:NSQAMPSO)
-      INTEGER IVEC
+      INTEGER IVEC,IFKS
 C  
 C LOCAL VARIABLES 
 C  
@@ -1002,17 +1002,17 @@ C
 C ----------
 C BEGIN CODE
 C ----------
-      iden=iden_values(nfksprocess)
-      glu_ij = ij_values(nfksprocess)
-      NTRY(nFKSprocess)=NTRY(nFKSprocess)+1
+      iden=iden_values(IFKS)
+      glu_ij = ij_values(IFKS)
+      NTRY(IFKS)=NTRY(ifks)+1
       if (glu_ij.eq.0) then
-            skip(nfksprocess)=0
+            skip(ifks)=0
       else
-            skip(nFKSprocess)=1			 
-            do while(nhel(glu_ij ,skip(nFKSprocess)).ne.-NHEL(GLU_IJ ,1))
-                  skip(nFKSprocess)=skip(nFKSprocess)+1
+            skip(ifks)=1			 
+            do while(nhel(glu_ij ,skip(ifks)).ne.-NHEL(GLU_IJ ,1))
+                  skip(ifks)=skip(ifks)+1
             enddo
-            skip(nFKSprocess)=skip(nFKSprocess)-1
+            skip(ifks)=skip(ifks)-1
       endif
       DO JJ=1,NGRAPHS
           amp2(jj)=0d0
@@ -1022,43 +1022,43 @@ C ----------
           jamp2(jj,I)=0d0
       ENDDO
       ENDDO
-      if (calculatedBorn) then
-         do j=1,nexternal-1
-            if (savemom(j,1).ne.p1(0,j) .or. savemom(j,2).ne.p1(3,j)) then
-               calculatedBorn=.false.
-               write (*,*) "momenta not the same in Born"
-	       stop
-            endif
-         enddo
-      endif
-      if (.not.calculatedBorn) then
-         do j=1,nexternal-1
-            savemom(j,1)=p1(0,j)
-            savemom(j,2)=p1(3,j)
-         enddo
+C      if (calculatedBorn) then
+C         do j=1,nexternal-1
+C            if (savemom(j,1).ne.p1(0,j) .or. savemom(j,2).ne.p1(3,j)) then
+C               calculatedBorn=.false.
+C               write (*,*) "momenta not the same in Born"
+C	       stop
+C            endif
+C         enddo
+C      endif
+C      if (.not.calculatedBorn) then
+C         do j=1,nexternal-1
+C            savemom(j,1)=p1(0,j)
+C            savemom(j,2)=p1(3,j)
+C         enddo
          ret_saveamp(:,:) = (0d0,0d0)
-      endif
+C      endif
       DO I=0,NSQAMPSO
           ANS(1,I) = 0D0
           ANS(2,I) = 0D0
       ENDDO
       DO IHEL=1,NCOMB
         ! the following lines are to avoid segfaults when glu_ij=0
-        cond_ij=skip(nfksprocess).eq.0
+        cond_ij=skip(ifks).eq.0
         if (.not.cond_ij) cond_ij=cond_ij.or.nhel(glu_ij,ihel).EQ.NHEL(GLU_IJ,1)
-        !if (nhel(glu_ij,ihel).EQ.NHEL(GLU_IJ,1).or.skip(nfksprocess).eq.0) then
+        !if (nhel(glu_ij,ihel).EQ.NHEL(GLU_IJ,1).or.skip(ifks).eq.0) then
         if (cond_ij) then
-          IF ((GOODHEL(IHEL,nFKSprocess) .OR. GOODHEL(IHEL+SKIP(nFKSprocess),nFKSprocess) .OR. NTRY(nFKSprocess) .LT. 2) ) THEN
-            CALL BORN_VEC(P1,NHEL(1,IHEL),IHEL,.false.,AMP2,JAMP2,T,borns,ret_saveamp,ivec)
+          IF ((GOODHEL(IHEL,ifks) .OR. GOODHEL(IHEL+SKIP(ifks),ifks) .OR. NTRY(ifks) .LT. 2) ) THEN
+            CALL BORN_VEC(P1,NHEL(1,IHEL),IHEL,.false.,AMP2,JAMP2,T,borns,ret_saveamp,ivec,ifks)
             DO I=1,NSQAMPSO
                 ANS(1,I)=ANS(1,I)+T(1,I)
                 ANS(2,I)=ANS(2,I)+T(2,I)
             ENDDO
-            if ( borns(1,0).ne.0d0 .AND. .NOT. GOODHEL(IHEL,nFKSprocess) ) then
-              GOODHEL(IHEL,nFKSprocess)=.TRUE.
+            if ( borns(1,0).ne.0d0 .AND. .NOT. GOODHEL(IHEL,ifks) ) then
+              GOODHEL(IHEL,ifks)=.TRUE.
             endif
-            if ( borns(2,0).ne.0d0 .AND. .NOT. GOODHEL(IHEL+SKIP(nFKSprocess),nFKSprocess) ) then
-              GOODHEL(IHEL+SKIP(nFKSprocess),nFKSprocess)=.TRUE.
+            if ( borns(2,0).ne.0d0 .AND. .NOT. GOODHEL(IHEL+SKIP(ifks),ifks) ) then
+              GOODHEL(IHEL+SKIP(ifks),ifks)=.TRUE.
             endif
 	  ENDIF
         ENDIF
@@ -1069,8 +1069,8 @@ C ----------
       ANS(1,0)=ANS(1,0)+ANS(1,I)
       ANS(2,0)=ANS(2,0)+ANS(2,I)
       ENDDO
-      calculatedBorn=.true.
-      if(ntry(nFKSprocess).ge.max_try) then
+C      calculatedBorn=.true.
+      if(ntry(ifks).ge.max_try) then
             DO_TRY=.FALSE.
       endif
       END
@@ -1273,7 +1273,7 @@ C        ret_saveamp(:,:) = saveamp(:,:)
 
 
 
-      SUBROUTINE BORN_VEC(P,NHEL,HELL,force_ijglu_zero,amp2,jamp2,ANS,borns,ret_saveamp,ivec)
+      SUBROUTINE BORN_VEC(P,NHEL,HELL,force_ijglu_zero,amp2,jamp2,ANS,borns,ret_saveamp,ivec,ifks)
 C  
 %(info_lines)s
 C RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
@@ -1307,7 +1307,7 @@ C
       logical force_ijglu_zero
       Double Precision amp2(%(ngraphs)d), jamp2(0:%(ncolor)d,0:nampso)
       COMPLEX*16 ANS(2,NSQAMPSO)
-      integer ivec
+      integer ivec,ifks
 C  
 C LOCAL VARIABLES 
 C  
@@ -1349,7 +1349,7 @@ C ----------
 C BEGIN CODE
 C ----------
       jamp(:,:) = (0d0,0d0)
-      glu_ij = ij_values(nfksprocess)
+      glu_ij = ij_values(ifks)
       if (force_ijglu_zero) glu_ij = 0
 
       DO I = 1, NSQAMPSO
@@ -1381,43 +1381,43 @@ C ----------
         if (glu_ij.ne.0) then
           if (nhel(glu_ij).ne.0) nhel(glu_ij) = ihel
         endif
-        if (.not. calculatedBorn) then
-        if(ihel.eq.back_hel)then
-          saveamp(:,hell) = 0d0
-        elseif(ihel.eq.-back_hel)then
-          saveamp(:,hell+skip(nFKSprocess)) = 0d0
-        else
-          write(*,*) "ERROR #1 in born.f"
-          stop
-        endif
+C        if (.not. calculatedBorn) then
+C        if(ihel.eq.back_hel)then
+C          saveamp(:,hell) = 0d0
+C        elseif(ihel.eq.-back_hel)then
+C          saveamp(:,hell+skip(ifks)) = 0d0
+C        else
+C          write(*,*) "ERROR #1 in born.f"
+C          stop
+C        endif
 %(helas_calls_vec)s
         do i=1,ngraphs
           if(ihel.eq.back_hel)then
             saveamp(i,hell)=amp(i)
             ret_saveamp(i,hell) = amp(i)
           elseif(ihel.eq.-back_hel)then
-            saveamp(i,hell+skip(nFKSprocess))=amp(i)
-            ret_saveamp(i,hell+skip(nFKSprocess)) = amp(i)
+            saveamp(i,hell+skip(ifks))=amp(i)
+            ret_saveamp(i,hell+skip(ifks)) = amp(i)
           else
             write(*,*) "ERROR #1 in born.f"
             stop
           endif
         enddo
-        elseif (calculatedBorn) then
-        do i=1,ngraphs
-          if(ihel.eq.back_hel)then
-            amp(i)=saveamp(i,hell)
-            ret_saveamp(i,hell) = saveamp(i,hell)
-          elseif(ihel.eq.-back_hel)then
-            amp(i)=saveamp(i,hell+skip(nFKSprocess))
-            ret_saveamp(i,hell+skip(nFKSprocess)) = saveamp(i,hell+skip(nFKSprocess))
-          else
-            write(*,*) "ERROR #1 in born.f"
-            stop
-          endif
-        enddo
+C        elseif (calculatedBorn) then
+C        do i=1,ngraphs
+C          if(ihel.eq.back_hel)then
+C            amp(i)=saveamp(i,hell)
+C            ret_saveamp(i,hell) = saveamp(i,hell)
+C          elseif(ihel.eq.-back_hel)then
+C            amp(i)=saveamp(i,hell+skip(ifks))
+C            ret_saveamp(i,hell+skip(ifks)) = saveamp(i,hell+skip(ifks))
+C          else
+C            write(*,*) "ERROR #1 in born.f"
+C            stop
+C          endif
+C        enddo
 C        ret_saveamp(:,:) = saveamp(:,:)
-        endif
+C        endif
 %(jamp_lines)s
 	DO M = 1, NAMPSO
         CF_INDEX = 0

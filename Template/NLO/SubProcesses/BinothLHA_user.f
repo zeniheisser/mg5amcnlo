@@ -1,4 +1,5 @@
-      subroutine BinothLHA(p,born_wgt,virt_wgt,amp_split_born,loc_saveamp,amp_split_finite)
+      subroutine BinothLHA(p,born_wgt,virt_wgt,amp_split_born,loc_saveamp
+     $    ,amp_split_finite,born_amp_split_cnt)
 c
 c Given the Born momenta, this is the Binoth-Les Houches interface file
 c that calls the OLP and returns the virtual weights. For convenience
@@ -34,6 +35,7 @@ c
       integer iamp
       double precision amp_split_born(1:amp_split_size)
       double precision amp_split_finite(amp_split_size)
+      double complex born_amp_split_cnt(amp_split_size,2,nsplitorders)
       double complex loc_saveamp(ngraphs,max_bhel)
 C      common /to_amp_split_finite/amp_split_finite
 
@@ -81,7 +83,7 @@ c======================================================================
 c======================================================================
 c example for checking the cancelation of the poles
 c      if (firsttime) then
-c          call getpoles(p,QES2,madfks_double,madfks_single,fksprefact)
+c          call getpoles(p,QES2,madfks_double,madfks_single,fksprefact,born_amp_split_cnt)
 c          if (dabs(single - madfks_single).lt.tolerance .and.
 c     &        dabs(double - madfks_double).lt.tolerance) then
 c              write(*,*) "---- POLES CANCELLED ----"
