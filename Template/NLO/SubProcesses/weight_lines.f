@@ -10,6 +10,7 @@
      $        ,plot_id(:),niproc(:),ipr(:),parton_pdf(:,:,:)
      $        ,icontr_sum(:,:),ifold_cnt(:) ,icolour_con(:,:,:)
      $        ,orderstag(:),amppos(:),need_match(:,:)
+     $        ,vector_index(:)
          double precision, allocatable :: momenta(:,:,:),momenta_m(:,:,:
      $        ,:),wgt(:,:),wgt_ME_tree(:,:),bjx(:,:),scales2(:,:)
      $        ,g_strong(:),wgts(:,:),parton_iproc(:,:),y_bst(:)
@@ -128,6 +129,10 @@ c amppos
          allocate(itemp1(n_contr))
          itemp1(1:max_contr)=amppos
          call move_alloc(itemp1,amppos)
+c vector_index
+         allocate(itemp1(n_contr))
+         itemp1(1:max_contr)=vector_index
+         call move_alloc(itemp1,vector_index)
 c parton_pdf
          allocate(itemp3(nexternal,max_iproc,n_contr))
          itemp3(1:nexternal,1:max_iproc,1:max_contr)=parton_pdf
@@ -252,6 +257,7 @@ c update maximum
       allocate(shower_scale_a(1,nexternal,nexternal))
       allocate(unwgt(1,1))
       allocate(need_match(nexternal,1))
+      allocate(vector_index(1))
       max_contr=1
       max_wgt=1
       max_iproc=1
@@ -298,5 +304,6 @@ c update maximum
       if (allocated(shower_scale_a)) deallocate(shower_scale_a)
       if (allocated(unwgt)) deallocate(unwgt)
       if (allocated(need_match)) deallocate(need_match)
+      if (allocated(vector_index)) deallocate(vector_index)
       return
       end

@@ -837,7 +837,7 @@ C Real deg amplitudes
       logical use_evpr, passcuts_coll
       common /to_use_evpr/use_evpr
 
-      integer vector_size, ivec
+      integer vector_size, ivec, icontr_bfr
       save vector_size
 
 c
@@ -924,6 +924,7 @@ c The nbody contributions
       do ivec=1,vector_size
          call update_fks_dir(nFKS_picked_nbody)
          MCcntcalled=MCcnt_vec(ivec)
+         icontr_bfr=icontr
          icolup_s(1,1)=-1 ! set colour connection to -1: i.e., complete_xmcsubt has not been called
          if (ini_fin_fks.eq.0) then
             jac=1d0
@@ -1140,6 +1141,16 @@ c subtraction terms.
          enddo
  12      continue
          MCcnt_vec(ivec)=MCcntcalled
+         if (icontr.gt.icontr_bfr) then
+            if(icontr_bfr.eq.0) icontr_bfr=1
+            ! write(*,*) "icontr increased from ",icontr_bfr," to ",icontr
+            do i=icontr_bfr,icontr
+               vector_index(i)=ivec
+            enddo
+         else if(icontr.lt.icontr_bfr) then
+            write (*,*) "ERROR: icontr decreased!! (driver_mintMC.f)"
+            stop 1
+         endif
       enddo
       elseif(ifl.eq.2) then
          if (ifold_counter .ne.

@@ -72,7 +72,7 @@ module driver_vec
    include 'born_nhel.inc'
     driver_vector_size = vector_size
     ! surrounding infrastructure variables
-    allocate(MCcnt_vec(0:vector_size))
+    allocate(MCcnt_vec(vector_size))
    ! n-body kinematics Borns
    allocate(snb_amp2(ngraphs,FKS_configs,vector_size))
    allocate(snb_jamp2(0:ncolor,FKS_configs,vector_size))
