@@ -32,7 +32,7 @@ COUPL = $(MODDIR)coupl.o
 COUMODS = $(MODDIR)couplings.mod 
 
 STORAGE = driver.o
-STOREMOD = driver.mod
+STOREMOD = driver_vec.mod
 
 ifneq ("$(wildcard ../../Source/RUNNING)","")
     LINKLIBS += -lrunning

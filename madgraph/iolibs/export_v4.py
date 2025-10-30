@@ -7364,6 +7364,7 @@ C
         # Write header
         header = """module couplings
                 implicit none
+                logical, public :: couplings_is_allocated = .false.
                 double precision, allocatable :: G_vec(:)
                 double precision, allocatable :: MU_R_vec(:)
                 """
@@ -7411,6 +7412,7 @@ C
         fsock.writelines('allocate(MU_R_vec(vector_size))')
         for coupl in coupling_list2:
             fsock.writelines('allocate(%s(vector_size))' % coupl)
+        fsock.writelines('couplings_is_allocated = .true.')
         fsock.writelines('end subroutine allocate_couplings')
         fsock.writelines('subroutine reset_couplings()')
         fsock.writelines('implicit none')
@@ -7421,6 +7423,7 @@ C
         fsock.writelines('end subroutine reset_couplings')
         fsock.writelines('subroutine deallocate_couplings()')
         fsock.writelines('implicit none')
+        fsock.writelines('couplings_is_allocated = .false.')
         fsock.writelines('if(allocated(G_vec)) deallocate(G_vec)')
         fsock.writelines('if(allocated(MU_R_vec)) deallocate(MU_R_vec)')
         for coupl in coupling_list2:

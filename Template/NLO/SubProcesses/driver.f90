@@ -1,5 +1,10 @@
-module driver
+module driver_vec
   implicit none
+  ! state variables to see the status of driver_vec
+  logical, public :: driver_is_allocated = .false.
+  integer, public :: driver_vector_size = 0
+  ! surrounding infrastructure variables
+  integer, allocatable, public :: MCcnt_vec(:)
   ! n-body kinematics Borns
   double precision, allocatable, public :: snb_amp2(:,:,:)
   double precision, allocatable, public :: snb_jamp2(:,:,:)
@@ -65,6 +70,9 @@ module driver
    include 'genps.inc'
    include 'orders.inc'
    include 'born_nhel.inc'
+    driver_vector_size = vector_size
+    ! surrounding infrastructure variables
+    allocate(MCcnt_vec(0:vector_size))
    ! n-body kinematics Borns
    allocate(snb_amp2(ngraphs,FKS_configs,vector_size))
    allocate(snb_jamp2(0:ncolor,FKS_configs,vector_size))
@@ -119,6 +127,7 @@ module driver
     allocate(spb_norad(0:3,nexternal-1,FKS_configs,vector_size))
     allocate(sp1_cnt(0:3,nexternal,0:FKS_configs,vector_size))
     allocate(sp1(0:3,0:nexternal,FKS_configs,vector_size))
+    driver_is_allocated = .true.
 end subroutine allocate_storage
 
 subroutine reset_storage()
@@ -183,6 +192,10 @@ end subroutine reset_storage
 
 subroutine deallocate_storage()
     implicit none
+    driver_is_allocated = .false.
+    driver_vector_size = 0
+    ! surrounding infrastructure variables
+    if (allocated(MCcnt_vec)) deallocate(MCcnt_vec)
     ! n-body kinematics Borns
     if (allocated(snb_amp2)) deallocate(snb_amp2)
     if (allocated(snb_jamp2)) deallocate(snb_jamp2)
@@ -239,4 +252,4 @@ subroutine deallocate_storage()
     if (allocated(sp1)) deallocate(sp1)
 end subroutine deallocate_storage
 
-end module driver
+end module driver_vec
