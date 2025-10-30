@@ -82,8 +82,8 @@ c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
         !  if (p_born(0,1).lt.0d0) goto 12
          call set_alphaS(p1_cnt(0,1,0))
          call set_alphaS_vec(p1_cnt(0,1,0),indent + coup_step)
-         spb(:,:,0,1) = p_born(:,:)
-         sp1_cnt(:,:,0,1) = p1_cnt(:,:,0)
+         spb(:,:,0,ivec) = p_born(:,:)
+         sp1_cnt(:,:,0,ivec) = p1_cnt(:,:,0)
          nbody=.false.
 
          do i=1,proc_map(proc_map(0,1),0)
@@ -102,25 +102,25 @@ c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
             passcuts_n1body=passcuts(p,rwgt)
             call set_alphaS(p_born_ev)
             call set_alphaS_vec(p_born_ev,icoup)
-            spb_ev(:,:,iFKS,1) = p_born_ev(:,:)
+            spb_ev(:,:,iFKS,ivec) = p_born_ev(:,:)
             call set_alphaS(p_born_norad)
             call set_alphaS_vec(p_born_norad,icoup + 1)
-            spb_norad(:,:,iFKS,1) = p_born_norad(:,:)
+            spb_norad(:,:,iFKS,ivec) = p_born_norad(:,:)
             call set_alphaS(p1_cnt(0,1,0))
             call set_alphaS_vec(p1_cnt(0,1,0),icoup + 2)
-            spb(:,:,iFKS,1) = p_born(:,:)
+            spb(:,:,iFKS,ivec) = p_born(:,:)
             do k=1,nexternal-1
                p_born_rot(0,k)=p_born(0,k)
                p_born_rot(1,k)=-p_born(1,k)
                p_born_rot(2,k)=p_born(2,k)
                p_born_rot(3,k)=-p_born(3,k)
             enddo
-            spb_rot(:,:,iFKS,1) = p_born_rot(:,:)
-            sp1_cnt(:,:,iFKS,1) = p1_cnt(:,:,0)
-            spb_coll(:,:,iFKS,1) = p_born_coll(:,:)
+            spb_rot(:,:,iFKS,ivec) = p_born_rot(:,:)
+            sp1_cnt(:,:,iFKS,ivec) = p1_cnt(:,:,0)
+            spb_coll(:,:,iFKS,ivec) = p_born_coll(:,:)
             call set_alphaS(p)
             call set_alphaS_vec(p,icoup + 3)
-            sp1(:,:,iFKS,1) = p(:,:)
+            sp1(:,:,iFKS,ivec) = p(:,:)
          enddo
       enddo
       return
@@ -321,7 +321,7 @@ c Pick the first one because that's the one with the soft singularity
          p_born(:,:) = spb(:,:,0,ivec)
          p1_cnt(:,:,0) = sp1_cnt(:,:,0,ivec)
          if (p_born(0,1).lt.0d0) skip_iter = .true.
-            if (skip_iter) return
+            if (skip_iter) cycle
          ! p_born_nb(:,:) = p_born(:,:)
          passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
          calculatedBorn=.false.

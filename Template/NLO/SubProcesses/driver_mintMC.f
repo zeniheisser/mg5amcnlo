@@ -849,7 +849,6 @@ c
       if(vector_size.eq.0) then
          vector_size=driver_vector_size
       end if
-      ivec=0
 c Find the nFKSprocess for which we compute the Born-like contributions
       if (firsttime) then
          firsttime=.false.
@@ -924,6 +923,7 @@ c The nbody contributions
 
       do ivec=1,vector_size
          call update_fks_dir(nFKS_picked_nbody)
+         MCcntcalled=MCcnt_vec(ivec)
          icolup_s(1,1)=-1 ! set colour connection to -1: i.e., complete_xmcsubt has not been called
          if (ini_fin_fks.eq.0) then
             jac=1d0
@@ -975,7 +975,7 @@ c the nFKSprocess is the same.
          call include_shape_in_shower_scale(p,nFKS_picked_nbody
      $        ,ifold_counter)
          call set_colour_connections(nFKS_picked_nbody,ifold_counter)
-            
+         MCcnt_vec(ivec)=MCcntcalled
          
  11      continue
 c The n+1-body contributions (including counter terms)
@@ -1138,8 +1138,9 @@ c subtraction terms.
             call include_shape_in_shower_scale(p,iFKS,ifold_counter)
             call set_colour_connections(iFKS,ifold_counter)
          enddo
-      enddo
  12      continue
+         MCcnt_vec(ivec)=MCcntcalled
+      enddo
       elseif(ifl.eq.2) then
          if (ifold_counter .ne.
      $       ifold(ifold_energy)*ifold(ifold_yij)*ifold(ifold_phi)) then
