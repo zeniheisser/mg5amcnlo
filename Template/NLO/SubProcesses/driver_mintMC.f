@@ -7,6 +7,7 @@ c**************************************************************************
       use extra_weights
       use mint_module
       use FKSParams
+      use weight_lines_vec
       implicit none
 C
 C     CONSTANTS
@@ -144,6 +145,7 @@ c
       enddo
 
       vector_size = 1
+      vector_size_wgt = vector_size
 
       call setrun                !Sets up run parameters
       call setpara('param_card.dat')   !Sets up couplings and masses
@@ -890,6 +892,7 @@ c "npNLO".
       if (ifl.eq.0 .or. ifl.eq.1) then
          if (ifl.eq.0) then
             icontr=0
+            call reset_weight_lines_vec
             virt_wgt_mint(0:amp_split_size)=0d0
             born_wgt_mint(0:amp_split_size)=0d0
             virtual_over_born=0d0
@@ -1197,6 +1200,7 @@ c determined which contributions are identical.
       use couplings
       use driver_vec
       use weight_lines
+      use weight_lines_vec
       use mint_module
       implicit none
       include 'nexternal.inc'
@@ -1450,6 +1454,7 @@ c The nbody contributions
      $        ,nFKS_picked_nbody)
 
       do ivec=1,vector_size
+         if(allocated(itype_vec)) call retrieve_weight_lines(nexternal,ivec)
          call update_fks_dir(nFKS_picked_nbody)
          MCcntcalled=MCcnt_vec(ivec)
          icontr_bfr=icontr
@@ -1672,16 +1677,17 @@ c subtraction terms.
          enddo
  12      continue
          MCcnt_vec(ivec)=MCcntcalled
-         if (icontr.gt.icontr_bfr) then
-            if(icontr_bfr.eq.0) icontr_bfr=1
-            ! write(*,*) "icontr increased from ",icontr_bfr," to ",icontr
-            do i=icontr_bfr,icontr
-               vector_index(i)=ivec
-            enddo
-         else if(icontr.lt.icontr_bfr) then
-            write (*,*) "ERROR: icontr decreased!! (driver_mintMC.f)"
-            stop 1
-         endif
+         ! if (icontr.gt.icontr_bfr) then
+         !    if(icontr_bfr.eq.0) icontr_bfr=1
+         !    ! write(*,*) "icontr increased from ",icontr_bfr," to ",icontr
+         !    do i=icontr_bfr,icontr
+         !       vector_index(i)=ivec
+         !    enddo
+         ! else if(icontr.lt.icontr_bfr) then
+         !    write (*,*) "ERROR: icontr decreased!! (driver_mintMC.f)"
+         !    stop 1
+         ! endif
+         if(allocated(itype)) call append_weight_lines(nexternal,ivec)
       enddo
       elseif(ifl.eq.2) then
          if (ifold_counter .ne.
@@ -1698,19 +1704,23 @@ c the cuts and DELTA (from complete_xmcsubt) is not equal to 1). Need to
 c add a bogus contribution corresponding to an FKS configuration that
 c contains a soft singularity to make sure that the code continues
 c correctly.
-         call special_check_SoftSing(proc_map(proc_map(0,1),1))
+         do ivec=1,vector_size
+            if(allocated(itype_vec)) call retrieve_weight_lines(nexternal,ivec)
+            f(:) = f_vec(:,ivec)
+            call special_check_SoftSing(proc_map(proc_map(0,1),1))
 c Include PDFs and alpha_S and reweight to include the uncertainties
-         call include_PDF_and_alphas
+            call include_PDF_and_alphas
 c Include the weight from the bias_function
-         call include_bias_wgt
+            call include_bias_wgt
 c Sum the contributions that can be summed before taking the ABS value
-         call sum_identical_contributions
+            call sum_identical_contributions
 c Update the shower starting scale for the S-events after we have
 c determined which contributions are identical.
-         call update_shower_scale_Sevents(ifold_counter,ifold_picked)
-         do ivec=1,vector_size
-            call fill_mint_function_NLOPS_vec(n1body_wgt,ivec)
+            call update_shower_scale_Sevents(ifold_counter,ifold_picked)
+            call fill_mint_function_NLOPS(f,n1body_wgt)
             call fill_MC_integer(1,proc_map(0,1),n1body_wgt*vol1)
+            f_vec(:,ivec) = f(:)
+            if(allocated(itype)) call append_weight_lines(nexternal,ivec)
          enddo
       endif
       return

@@ -60,7 +60,7 @@ FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) 			\
 	 get_color.o iproc_map.o sudakov.o				\
 	 MC_integer.o $(reweight_xsec_events_pdf_dummy)			\
 	 $(pineappl_interface) weight_lines.o mint_module.o polfit.o \
-	 driver_vec.o 
+	 weight_lines_vec.o driver_vec.o
 
 FILESSUD= \
          $(patsubst %.f,%.o,$(wildcard  ewsudakov*.f)) 			\
@@ -104,7 +104,7 @@ RWGFILES=reweight_xsec_events.o handling_lhe_events.o recmom.o 		\
 	$(reweight_xsec_events_pdf_dummy) fill_MC_mshell.o cluster.o	\
 	get_color.o iproc_map.o chooser_functions.o 		\
 	pythia_unlops.o recluster.o splitorders_stuff.o reweight_xsec.o \
-	weight_lines.o orderstags_glob.o
+	weight_lines.o orderstags_glob.o weight_lines_vec.o
 
 %.o: %.f
 	$(FC) $(FFLAGS) -c -I. -I$(LIBDIR) $<
@@ -186,10 +186,10 @@ libMadLoop.a:
 mint_module.o : FKSParams.o
 BinothLHA_OLP.o: FKSParams.o
 BinothLHA.o: FKSParams.o
-reweight_xsec_events.o: weight_lines.o
-fks_singular.o: weight_lines.o mint_module.o
-driver_mintMC.o: weight_lines.o mint_module.o pythia8_control.inc pythia8_control_setup.inc
-driver_mintFO.o: weight_lines.o mint_module.o FKSParams.o
+reweight_xsec_events.o: weight_lines.o weight_lines_vec.o
+fks_singular.o: weight_lines.o weight_lines_vec.o mint_module.o
+driver_mintMC.o: weight_lines.o weight_lines_vec.o mint_module.o pythia8_control.inc pythia8_control_setup.inc
+driver_mintFO.o: weight_lines.o weight_lines_vec.o mint_module.o FKSParams.o
 pythia8_wrapper.o: pythia8_fortran.o LHAFortran_aMCatNLO.h
 chooser_functions.o: weight_lines.o
 cluster.o: weight_lines.o
