@@ -892,7 +892,7 @@ c "npNLO".
       if (ifl.eq.0 .or. ifl.eq.1) then
          if (ifl.eq.0) then
             icontr=0
-            call reset_weight_lines_vec
+            ! call reset_weight_lines_vec(nexternal)
             virt_wgt_mint(0:amp_split_size)=0d0
             born_wgt_mint(0:amp_split_size)=0d0
             virtual_over_born=0d0
@@ -1405,6 +1405,7 @@ c "npNLO".
       if (ifl.eq.0 .or. ifl.eq.1) then
          if (ifl.eq.0) then
             icontr=0
+            if(allocated(itype_vec)) call reset_weight_lines_vec(nexternal)
             virt_wgt_mint(0:amp_split_size)=0d0
             born_wgt_mint(0:amp_split_size)=0d0
             virtual_over_born=0d0

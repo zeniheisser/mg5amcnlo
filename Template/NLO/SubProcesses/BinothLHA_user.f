@@ -10,6 +10,7 @@ c
       implicit none
       include "nexternal.inc"
       include "coupl.inc"
+      include 'genps.inc'
       double precision pi
       parameter (pi=3.1415926535897932385d0)
       double precision p(0:3,nexternal-1)

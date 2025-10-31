@@ -1678,6 +1678,39 @@ contains
     endif
   end subroutine gen
 
+
+  subroutine gen_vec(fun,gen_mode,vn,x)
+    implicit none
+    integer :: vn,gen_mode
+    logical :: found_point
+    double precision, external :: fun
+    double precision, dimension(ndimmax) :: x
+    double precision :: vol
+    if (gen_mode.eq.0) then
+       call initialise_mint_gen
+    elseif(gen_mode.eq.3) then
+       call print_gen_counters
+    elseif(gen_mode.eq.1) then
+       call increase_gen_counters_before(vn)
+10     continue
+       new_point=.true.
+       if (vn.eq.1) then
+          call get_random_cell_flat(x,vol)
+       else
+          call get_weighted_cell(x,vol)
+       endif
+       call compute_integrand(fun,x,vol)
+       call increase_gen_counters_middle(vn)
+       call check_upper_bound(vn,found_point)
+       if (.not.found_point) goto 10
+       call increase_gen_counters_end(vn)
+    else
+       write (*,*) "Unknown gen_mode in gen (from mint_module)",gen_mode
+       stop 1
+    endif
+  end subroutine gen
+
+
   subroutine increase_gen_counters_middle(vn)
     implicit none
     integer :: vn

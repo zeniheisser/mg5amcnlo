@@ -2047,7 +2047,7 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         coupling_dep = fortran_model.get('model').get('coupling_dep')
         hel_vec = "\n".join(helas_calls)
         for coup in coupling_dep.keys():
-            hel_vec = hel_vec.replace(coup, coup + "_vec(ivec)")
+            hel_vec = hel_vec.replace(coup+",", coup + "_vec(ivec),")
         
         replace_dict['helas_calls_vec'] = hel_vec
 
