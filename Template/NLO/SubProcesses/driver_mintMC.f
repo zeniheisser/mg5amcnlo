@@ -41,6 +41,8 @@ c Vegas stuff
 
       real*8 sigintF
       external sigintF
+      real*8 sigintF_vec
+      external sigintF_vec
 
       logical            flat_grid
       common/to_readgrid/flat_grid                !Tells if grid read from file
@@ -151,7 +153,7 @@ c
       call fill_configurations_common
       call check_amp_split 
       if(.not.driver_is_allocated) 
-     $  call allocate_storage(vector_size)
+     $  call allocate_storage(vector_size,ndimmax,max_fold,nintegrals)
       if(.not.couplings_is_allocated)
      $  call allocate_couplings(vector_size*(4*FKS_configs + 1))
 c     
@@ -217,8 +219,11 @@ c     setting of the grids
 c*************************************************************
       if (imode.eq.-1.or.imode.eq.0) then
          write (*,*) 'imode is ',imode
-         call mint(sigintF)
+         call mint_vec(sigintF_vec)
+         ! call mint(sigintF)
          call deallocate_weight_lines
+         call deallocate_storage
+         call deallocate_couplings
          open(unit=58,file='results.dat',status='unknown')
          write(58,*) ans(1,1),unc(2,1),0d0,0,0,0,0,0d0,0d0,ans(2,1)
          close(58)
@@ -227,8 +232,11 @@ c     computation of upper bounding envelope
 c*************************************************************
       elseif(imode.eq.1) then
          write (*,*) 'imode is ',imode
-         call mint(sigintF)
+         call mint_vec(sigintF_vec)
+         ! call mint(sigintF)
          call deallocate_weight_lines
+         call deallocate_storage
+         call deallocate_couplings
          open(unit=58,file='results.dat',status='unknown')
          write(58,*) ans(1,1)+ans(5,1),unc(2,1),0d0,0,0,0,0,0d0,0d0
      $        ,ans(2,1) 
@@ -843,6 +851,9 @@ C Real deg amplitudes
 c
       if (new_point .and. ifl.ne.2) then
          pass_cuts_check=.false.
+         passcuts_born_vec(:)=.false.
+         passcuts_nbody_vec(:,:)=.false.
+         passcuts_n1body_vec(:,:)=.false.
       endif
 
       sigintF=0d0
@@ -917,14 +928,13 @@ c The nbody contributions
          endif
 
          call amplitudes_vec(proc_map,rwgt,vector_size
-     $        ,nFKS_picked_nbody,skip_iter)
-         if (abrv.eq.'real') goto 11
-         if (skip_iter) goto 12
+     $        ,nFKS_picked_nbody)
 
       do ivec=1,vector_size
          call update_fks_dir(nFKS_picked_nbody)
          MCcntcalled=MCcnt_vec(ivec)
          icontr_bfr=icontr
+         ! x(:) = x_vegas_vec(:,ivec)
          icolup_s(1,1)=-1 ! set colour connection to -1: i.e., complete_xmcsubt has not been called
          if (ini_fin_fks.eq.0) then
             jac=1d0
@@ -1179,6 +1189,529 @@ c determined which contributions are identical.
          call update_shower_scale_Sevents(ifold_counter,ifold_picked)
          call fill_mint_function_NLOPS(f,n1body_wgt)
          call fill_MC_integer(1,proc_map(0,1),n1body_wgt*vol1)
+      endif
+      return
+      end
+
+      function sigintF_vec(vegas_wgt,ifl)
+      use couplings
+      use driver_vec
+      use weight_lines
+      use mint_module
+      implicit none
+      include 'nexternal.inc'
+      include 'nFKSconfigs.inc'
+      include 'run.inc'
+      include 'orders.inc'
+      include 'fks_info.inc'
+      include 'genps.inc'
+      include 'born_nhel.inc'
+      logical firsttime,passcuts,passcuts_nbody,passcuts_n1body
+      integer i,j,ifl,proc_map(0:fks_configs,0:fks_configs)
+     $     ,nFKS_picked_nbody,nFKS_in,nFKS_out,izero,ione,itwo,mohdr
+     $     ,iFKS,sum,k
+      double precision xx(ndimmax),vegas_wgt,f(nintegrals),jac,p(0:3
+     $     ,nexternal),rwgt,vol,sig,x(99),MC_int_wgt,vol1,probne,gfactsf
+     $     ,gfactcl,replace_MC_subt,sudakov_damp,sigintF_vec,n1body_wgt
+      double precision jac_born, jac_real
+      save vol1,proc_map
+      integer             ini_fin_fks
+      common/fks_channels/ini_fin_fks
+      external passcuts
+      parameter (izero=0,ione=1,itwo=2,mohdr=-100)
+      data firsttime/.true./
+      double precision p_born(0:3,nexternal-1), p_born_rot(0:3,nexternal-1)
+      common /pborn/   p_born
+      
+
+      double precision p_born_coll(0:3,nexternal-1)
+      common/pborn_coll/p_born_coll
+      
+      double precision p_born_ev(0:3,nexternal-1)
+      common/pborn_ev/ p_born_ev
+      
+      double precision p_born_norad(0:3,nexternal-1)
+      common/pborn_norad/p_born_norad
+
+      integer     fold,ifold_counter
+      common /cfl/fold,ifold_counter
+      logical calculatedBorn
+      common/ccalculatedBorn/calculatedBorn
+      integer              MCcntcalled
+      common/c_MCcntcalled/MCcntcalled
+      double precision virtual_over_born
+      common /c_vob/   virtual_over_born
+      logical       nbody
+      common/cnbody/nbody
+      integer         nndim
+      common/tosigint/nndim
+      character*4      abrv
+      common /to_abrv/ abrv
+      double precision p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
+     $     ,pswgt_cnt(-2:2),jac_cnt(-2:2)
+      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+      double precision       wgt_ME_born,wgt_ME_real
+      common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
+      integer ifold_picked
+      double precision x_save(ndimmax,max_fold)
+      common /c_vegas_x_fold/x_save,ifold_picked
+      integer icolup_s(2,nexternal-1),icolup_h(2,nexternal)
+      common /colour_connections/ icolup_s,icolup_h
+      
+      double precision ret_amp_split(amp_split_size)
+
+C Born variables
+      double precision born_amp2(ngraphs), born_jamp2(0:ncolor)
+      complex*16 born_ans_cnt(2,nsplitorders)
+      double precision born_amp_split(amp_split_size)
+      double complex born_amp_split_cnt(amp_split_size,2,nsplitorders)
+      double complex born_saveamp(ngraphs,max_bhel)
+      double precision wgt_born
+
+      double precision ev_amp2(ngraphs), ev_jamp2(0:ncolor)
+      complex*16 ev_ans_cnt(2,nsplitorders)
+      double precision ev_amp_split(amp_split_size)
+      double complex ev_amp_split_cnt(amp_split_size,2,nsplitorders)
+      double complex ev_saveamp(ngraphs,max_bhel)
+      double precision wgt_ev
+
+      double precision norad_amp2(ngraphs), norad_jamp2(0:ncolor)
+      complex*16 norad_ans_cnt(2,nsplitorders)
+      double precision norad_amp_split(amp_split_size)
+      double complex norad_amp_split_cnt(amp_split_size,2,nsplitorders)
+      double complex norad_saveamp(ngraphs,max_bhel)
+      double precision wgt_norad
+   
+      double precision coll_amp2(ngraphs), coll_jamp2(0:ncolor)
+      complex*16 coll_ans_cnt(2,nsplitorders)
+      double precision coll_amp_split(amp_split_size)
+      double complex coll_amp_split_cnt(amp_split_size,2,nsplitorders)
+      double complex coll_saveamp(ngraphs,max_bhel)
+      double precision wgt_coll
+
+
+C Virtual variables
+      double precision amp_split_virt(amp_split_size),
+     &     amp_split_born_for_virt(amp_split_size),
+     &     amp_split_avv(amp_split_size)
+      double precision amp_split_wgtnstmp(amp_split_size),
+     $                 amp_split_wgtwnstmpmuf(amp_split_size),
+     $                 amp_split_wgtwnstmpmur(amp_split_size)
+      double precision bsv_wgt,virt_wgt,born_wgt
+
+C Real variables
+      double precision zero, one
+      parameter (zero=0d0,one=1d0)
+      double precision real_amp_split(amp_split_size)
+      double precision fx_ev, fx_s, fx_c, fx_sc
+      double precision deg_xi_c, deg_lxi_c, deg_xi_sc, deg_lxi_sc
+      double precision    xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3)
+     $                    ,p_i_fks_cnt(0:3,-2:2)
+      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+      double precision   xi_i_fks_cnt(-2:2)
+      common /cxiifkscnt/xi_i_fks_cnt
+
+C n+1-kinematic borns
+      double precision n1_amp2(ngraphs), n1_jamp2(0:ncolor)
+      double precision rot_amp2(ngraphs), rot_jamp2(0:ncolor)
+      complex*16 n1_ans_cnt(2,nsplitorders)
+      complex*16 rot_ans_cnt(2,nsplitorders)
+      double precision n1_amp_split(amp_split_size)
+      double precision coll_n1_amp_split(amp_split_size)
+      double precision rot_amp_split(amp_split_size)
+      double complex n1_amp_split_cnt(amp_split_size,2,nsplitorders)
+      double complex rot_amp_split_cnt(amp_split_size,2,nsplitorders)
+      double complex n1_saveamp(ngraphs,max_bhel)
+      double complex rot_saveamp(ngraphs,max_bhel)
+      double precision coll_n1_amp2(ngraphs), coll_n1_jamp2(0:ncolor)
+      complex*16 coll_n1_cnt(2,nsplitorders)
+      double complex coll_n1_split_cnt(amp_split_size,2,nsplitorders)
+      double complex coll_n1_saveamp(ngraphs,max_bhel)
+      double precision wgt_n1, wgt_rot, wgt_coll_n1
+      
+
+C Born-like variables for FKS sector dependent contributions
+      double precision nb_amp2(ngraphs), nb_jamp2(0:ncolor)
+      complex*16 nb_ans_cnt(2,nsplitorders)
+      double precision nb_amp_split(amp_split_size)
+      double complex nb_amp_split_cnt(amp_split_size,2,nsplitorders)
+      double complex nb_saveamp(ngraphs,max_bhel)
+      double precision wgt_nb
+
+
+C Real deg amplitudes
+      double precision amp_split_collrem_xi(amp_split_size), 
+     $                 amp_split_collrem_lxi(amp_split_size),
+     $                 amp_split_wgtdegrem_xi(amp_split_size),
+     $                 amp_split_wgtdegrem_lxi(amp_split_size),
+     $                 amp_split_wgtdegrem_muF(amp_split_size)
+      double precision amp_split_wgtpsch_p(amp_split_size),
+     $                 amp_split_wgtpsch_l(amp_split_size),
+     $                 amp_split_wgtpsch_d(amp_split_size)
+
+
+      logical skip_iter
+
+      integer              nFKSprocess
+      common/c_nFKSprocess/nFKSprocess
+
+      logical use_evpr, passcuts_coll
+      common /to_use_evpr/use_evpr
+
+      integer vector_size, ivec, icontr_bfr
+      save vector_size
+
+c
+      if (new_point .and. ifl.ne.2) then
+         pass_cuts_check=.false.
+         pass_cuts_check_vec(:)=.false.
+      endif
+
+      sigintF_vec=0d0
+      if(vector_size.eq.0) then
+         vector_size=driver_vector_size
+      end if
+c Find the nFKSprocess for which we compute the Born-like contributions
+      if (firsttime) then
+         firsttime=.false.
+c Determines the proc_map that sets which FKS configuration can be
+c summed explicitly and which by MC-ing.
+         call setup_proc_map(sum,proc_map,ini_fin_fks)
+c For the S-events, we can combine processes when they give identical
+c processes at the Born. Make sure we check that we get indeed identical
+c IRPOC's
+         call find_iproc_map()
+c For FxFx or UNLOPS matching with pythia8, set the correct attributes
+c for the <event> tag in the LHEF file. "npNLO" are the number of Born
+c partons in this multiplicity when running the code at NLO accuracy
+c ("npLO" is -1 in that case). When running LO only, invert "npLO" and
+c "npNLO".
+         call setup_event_attributes
+         ! call allocate_couplings(4*FKS_configs + 1)
+         ! call allocate_storage(1)
+      endif
+
+      if (ifl.eq.0) then
+         ifold_counter=1
+      elseif(ifl.eq.1) then
+         ifold_counter=ifold_counter+1
+      endif
+
+      fold=ifl
+      if (ifl.eq.0 .or. ifl.eq.1) then
+         if (ifl.eq.0) then
+            icontr=0
+            virt_wgt_mint(0:amp_split_size)=0d0
+            born_wgt_mint(0:amp_split_size)=0d0
+            virtual_over_born=0d0
+         endif
+         MCcntcalled=0
+         MCcnt_vec(:)=0
+         wgt_me_real=0d0
+         wgt_me_born=0d0
+         if (ickkw.eq.3) call set_FxFx_scale(0,p,nFKSprocess)
+         do ivec=1,vector_size
+            xx(:) = x_mint_vec(:,ivec)
+            call update_vegas_x(xx,x)
+            x_vegas_vec(:,ivec)=x
+         enddo
+         call update_vegas_x(xx,x)
+         do i=1,nndim
+            x_save(i,ifold_counter)=x(i)
+            do ivec=1,vector_size
+               x_save_vec(i,ifold_counter,ivec)=x_vegas_vec(i,ivec)
+            enddo
+         enddo
+C  Randomly chooses the FKS configuration to work on (proc_map(0,1))
+         if (ifl.eq.0)
+     &        call get_MC_integer(1,proc_map(0,0),proc_map(0,1),vol1)
+
+     
+C ZW: Reset all the storage arrays
+         call reset_storage()
+
+         call generate_momenta_vec(iconfig,sum,proc_map
+     $        ,x,rwgt,vol1,vector_size)
+
+
+c The nbody contributions
+         nbody=.true.
+!          calculatedBorn=.false.
+! c Pick the first one because that's the one with the soft singularity
+         nFKS_picked_nbody=proc_map(proc_map(0,1),1)
+         if (sum.eq.0) then
+! c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
+            nFKS_in=nFKS_picked_nbody
+            call get_born_nFKSprocess(nFKS_in,nFKS_out)
+            nFKS_picked_nbody=nFKS_out
+         endif
+
+         call amplitudes_vec(proc_map,rwgt,vector_size
+     $        ,nFKS_picked_nbody)
+
+      do ivec=1,vector_size
+         call update_fks_dir(nFKS_picked_nbody)
+         MCcntcalled=MCcnt_vec(ivec)
+         icontr_bfr=icontr
+         icolup_s(1,1)=-1 ! set colour connection to -1: i.e., complete_xmcsubt has not been called
+         if (ini_fin_fks.eq.0) then
+            jac=1d0
+         else
+            jac=0.5d0
+         endif
+! c Also the Born needs to be included in the Importance Sampling over the
+! c FKS configurations (for the shower scale) (multiply by
+! c 1/proc_map(0,0)*vol1)
+         jac=jac/(proc_map(0,0)*vol1)
+         call generate_momenta(nndim,iconfig,jac,x,p)
+         if (p_born(0,1).lt.0d0) goto 12
+         born_amp2(:)=sborn_amp2(:,ivec)
+         born_jamp2(:)=sborn_jamp2(:,ivec)
+         born_amp_split(:)=sborn_amp_split(:,ivec)
+         born_amp_split_cnt(:,:,:)=sborn_amp_split_cnt(:,:,:,ivec)
+         born_ans_cnt(:,:)=sborn_ans_cnt(:,:,ivec)
+         born_saveamp(:,:)=sborn_saveamp(:,:,ivec)
+         wgt_born=swgt_born(ivec)
+         ! write(*,*) "NBODY CONTRIBUTION for FKS proc ",nFKS_picked_nbody
+         ! write(*,*) p_born(:,:)
+         call compute_prefactors_nbody(vegas_wgt)
+         call set_cms_stuff(izero)
+         call set_shower_scale_noshape(p,nFKS_picked_nbody*2-1)
+         if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0),nFKSprocess)
+         passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
+         if (passcuts_nbody) then
+            pass_cuts_check=.true.
+            pass_cuts_check_vec(ivec)=.true.
+            call set_alphaS(p1_cnt(0,1,0))
+            ! call sborn_amp(p_born,born_amp2,born_jamp2,born_amp_split,born_amp_split_cnt,wgt_born,born_ans_cnt,born_saveamp)
+            call include_multichannel_enhance(1,born_amp2,ev_amp2,norad_amp2)
+            if (abrv(1:2).ne.'vi') then
+               call compute_born(born_amp_split)
+               if(abrv.ne.'born'.and.abrv.ne.'bovi') call compute_ewsudakov(p_born,wgt_born,born_saveamp)
+            endif
+            if (abrv.ne.'born') then
+               call bornsoftvirtual(p1_cnt(0,1,0),p_born,bsv_wgt,virt_wgt,born_wgt
+     $     ,amp_split_virt,amp_split_born_for_virt,amp_split_avv
+     $     ,amp_split_wgtnstmp,amp_split_wgtwnstmpmuf,amp_split_wgtwnstmpmur
+     $     ,wgt_born,born_ans_cnt,born_amp_split_cnt,born_saveamp)
+               call compute_nbody_noborn(p1_cnt(0,1,0),bsv_wgt,virt_wgt,born_wgt
+     $     ,amp_split_virt,amp_split_born_for_virt,amp_split_avv
+     $     ,amp_split_wgtnstmp,amp_split_wgtwnstmpmuf,amp_split_wgtwnstmpmur
+     $     ,born_amp_split)
+            endif
+         endif
+c Update the shower starting scale. This might be updated again below if
+c the nFKSprocess is the same.
+         call include_shape_in_shower_scale(p,nFKS_picked_nbody
+     $        ,ifold_counter)
+         call set_colour_connections(nFKS_picked_nbody,ifold_counter)
+         MCcnt_vec(ivec)=MCcntcalled
+         
+ 11      continue
+c The n+1-body contributions (including counter terms)
+         if (abrv.eq.'born'.or.abrv(1:2).eq.'vi') goto 12
+c Set calculated Born to zero to prevent numerical inaccuracies: not
+c always exactly the same momenta in computation of Born when computed
+c for different nFKSprocess.
+         if(sum.eq.0) calculatedBorn=.false.
+         nbody=.false.
+         do i=1,proc_map(proc_map(0,1),0)
+            wgt_me_real=0d0
+            wgt_me_born=0d0
+            iFKS=proc_map(proc_map(0,1),i)
+            call update_fks_dir(iFKS)
+            jac=1d0/vol1
+            probne=1d0
+            gfactsf=1.d0
+            gfactcl=1.d0
+            MCcntcalled=0
+            icolup_s(1,1)=-1    ! set colour connection to -1: i.e., complete_xmcsubt has not been called
+            call generate_momenta(nndim,iconfig,jac,x,p)
+c Every contribution has to have a viable set of Born momenta (even if
+c counter-event momenta do not exist).
+            if (p_born(0,1).lt.0d0) cycle
+c Compute the n1-body prefactors
+            call compute_prefactors_n1body(vegas_wgt,jac)
+c Set the shower scales            
+            if (ickkw.eq.3) then
+               call set_FxFx_scale(0,p,nFKSprocess) ! reset the FxFx scales
+            endif
+            call set_cms_stuff(izero)
+            call set_shower_scale_noshape(p,iFKS*2-1)
+            if (ickkw.eq.3) then
+               call set_FxFx_scale(2,p1_cnt(0,1,0),nFKSprocess)
+            endif
+            call set_cms_stuff(mohdr)
+            call set_shower_scale_noshape(p,iFKS*2)
+            if (ickkw.eq.3) then
+               if (p(0,1).gt.0d0) then
+                  call set_FxFx_scale(3,p,nFKSprocess)
+               endif
+            endif              
+c check if event or counter-event passes cuts
+            call set_cms_stuff(izero)
+            if (ickkw.eq.3) call set_FxFx_scale(-2,p1_cnt(0,1,0),nFKSprocess)
+            passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
+            call set_cms_stuff(mohdr)
+            if (ickkw.eq.3) call set_FxFx_scale(-3,p,nFKSprocess)
+            passcuts_n1body=passcuts(p,rwgt)
+            if (.not. (passcuts_nbody.or.passcuts_n1body)) cycle
+
+c Include the various contributions
+            nb_amp2(:)=snb_amp2(:,iFKS,ivec)
+            nb_jamp2(:)=snb_jamp2(:,iFKS,ivec)
+            nb_amp_split(:)=snb_amp_split(:,iFKS,ivec)
+            nb_amp_split_cnt(:,:,:)=snb_amp_split_cnt(:,:,:,iFKS,ivec)
+            nb_ans_cnt(:,:)=snb_ans_cnt(:,:,iFKS,ivec)
+            nb_saveamp(:,:)=snb_saveamp(:,:,iFKS,ivec)
+            coll_amp_split(:)=scb_amp_split(:,iFKS,ivec)
+            coll_amp_split_cnt(:,:,:)=scb_amp_split_cnt(:,:,:,iFKS,ivec)
+            coll_ans_cnt(:,:)=scb_ans_cnt(:,:,iFKS,ivec)
+            coll_saveamp(:,:)=scb_saveamp(:,:,iFKS,ivec)
+            ev_amp2(:)=sev_amp2(:,iFKS,ivec)
+            norad_amp2(:)=snorad_amp2(:,iFKS,ivec)
+            rot_jamp2(:)=srot_jamp2(:,iFKS,ivec)
+            ! rot_amp_split(:)=srot_amp_split(:,iFKS,1)
+            rot_amp_split_cnt(:,:,:)=srot_amp_split_cnt(:,:,:,iFKS,ivec)
+            rot_ans_cnt(:,:)=srot_ans_cnt(:,:,iFKS,ivec)
+            ! rot_saveamp(:,:)=srot_saveamp(:,:,iFKS,1)
+            coll_n1_amp_split(:)=sc1_amp_split(:,iFKS,ivec)
+            coll_n1_split_cnt(:,:,:)=sc1_amp_split_cnt(:,:,:,iFKS,ivec)
+            coll_n1_cnt(:,:)=sc1_ans_cnt(:,:,iFKS,ivec)
+            coll_n1_saveamp(:,:)=sc1_saveamp(:,:,iFKS,ivec)
+            n1_amp2(:)=sn1_amp2(:,iFKS,ivec)
+            n1_jamp2(:)=sn1_jamp2(:,iFKS,ivec)
+            n1_amp_split(:)=sn1_amp_split(:,iFKS,ivec)
+            n1_amp_split_cnt(:,:,:)=sn1_amp_split_cnt(:,:,:,iFKS,ivec)
+            n1_ans_cnt(:,:)=sn1_ans_cnt(:,:,iFKS,ivec)
+            n1_saveamp(:,:)=sn1_saveamp(:,:,iFKS,ivec)
+            real_amp_split(:)=sreal_amp_split(:,iFKS,ivec)
+            fx_ev=sfx_ev(iFKS,ivec)
+
+            if (passcuts_nbody .and. abrv.ne.'real') then
+               pass_cuts_check=.true.
+               pass_cuts_check_vec(ivec)=.true.
+c Include the MonteCarlo subtraction terms
+               if (ickkw.ne.4) then
+                  call set_cms_stuff(mohdr)
+                  if (ickkw.eq.3) call set_FxFx_scale(-3,p,nFKSprocess)
+                  call set_alphaS(p)
+                  call include_multichannel_enhance(4,n1_amp2,ev_amp2,norad_amp2)
+                  call compute_MC_subt_term(p,passcuts_nbody,gfactsf
+     $                 ,gfactcl,probne,n1_ans_cnt,n1_amp_split_cnt,n1_jamp2
+     $                 ,rot_ans_cnt,rot_amp_split_cnt,rot_jamp2)
+               else
+c For UNLOPS all real-emission contributions need to be added to the
+c S-events. Do this by setting probne to 0. For UNLOPS, no MC counter
+c events are called, so this will remain 0.
+                  probne=0d0
+               endif
+            endif
+            if (passcuts_nbody .and. abrv.ne.'real') then
+c Include the FKS counter terms. When close to the soft or collinear
+c limits, the MC subtraction terms should be replaced by the FKS
+c ones. This is set via the gfactsf, gfactcl and probne functions (set
+c by the call to compute_MC_subt_term) through the 'replace_MC_subt'.
+               call set_cms_stuff(izero)
+               if (ickkw.eq.3) call set_FxFx_scale(-2,p1_cnt(0,1,0),nFKSprocess)
+               call set_alphaS(p1_cnt(0,1,0))
+               call include_multichannel_enhance(3,nb_amp2,ev_amp2,norad_amp2)
+               replace_MC_subt=(1d0-gfactsf)*probne
+               call sreal_store(p1_cnt(0,1,0),0d0,y_ij_fks_ev,fx_s,ret_amp_split
+     $              ,real_amp_split
+     $              ,nb_amp_split,nb_ans_cnt,nb_amp_split_cnt,nb_saveamp
+     $              ,coll_amp_split,coll_ans_cnt,coll_amp_split_cnt,coll_saveamp)
+               call compute_soft_counter_term(replace_MC_subt,ret_amp_split,fx_s)
+               call set_cms_stuff(itwo)
+               replace_MC_subt=(1d0-gfactcl)*(1d0-gfactsf)*probne
+               call sreal_deg(p1_cnt(0,1,2),zero,one, deg_xi_sc,deg_lxi_sc,
+     $    amp_split_wgtdegrem_xi,amp_split_wgtdegrem_lxi,amp_split_wgtdegrem_muF,
+     $    amp_split_wgtpsch_p, amp_split_wgtpsch_l, amp_split_wgtpsch_d,
+     $    nb_ans_cnt,nb_amp_split_cnt,coll_ans_cnt,coll_amp_split_cnt)
+               call sreal_store(p1_cnt(0,1,2),zero,one,fx_sc,ret_amp_split
+     $              ,real_amp_split
+     $              ,nb_amp_split,nb_ans_cnt,nb_amp_split_cnt,nb_saveamp
+     $              ,coll_amp_split,coll_ans_cnt,coll_amp_split_cnt,coll_saveamp)
+               call compute_soft_collinear_counter_term(replace_MC_subt,ret_amp_split,fx_sc,
+     &    amp_split_wgtdegrem_xi, amp_split_wgtdegrem_lxi, amp_split_wgtdegrem_muF,
+     &    amp_split_wgtpsch_p, amp_split_wgtpsch_l,amp_split_wgtpsch_d)
+               call set_cms_stuff(ione)
+               replace_MC_subt=(1d0-gfactcl)*(1d0-gfactsf)*probne
+               call sreal_deg(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,deg_xi_c,deg_lxi_c,
+     $    amp_split_wgtdegrem_xi,amp_split_wgtdegrem_lxi,amp_split_wgtdegrem_muF,
+     $    amp_split_wgtpsch_p, amp_split_wgtpsch_l, amp_split_wgtpsch_d,
+     $    nb_ans_cnt,nb_amp_split_cnt,coll_ans_cnt,coll_amp_split_cnt)
+               call sreal_store(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fx_c,ret_amp_split
+     $              ,real_amp_split
+     $              ,nb_amp_split,nb_ans_cnt,nb_amp_split_cnt,nb_saveamp
+     $              ,coll_amp_split,coll_ans_cnt,coll_amp_split_cnt,coll_saveamp)
+               call compute_collinear_counter_term(replace_MC_subt,ret_amp_split,fx_c,
+     &    amp_split_wgtdegrem_xi,amp_split_wgtdegrem_lxi,amp_split_wgtdegrem_muF,
+     &    amp_split_wgtpsch_p, amp_split_wgtpsch_l, amp_split_wgtpsch_d)
+            endif
+c Include the real-emission contribution.
+            if (passcuts_n1body) then
+               pass_cuts_check=.true.
+               pass_cuts_check_vec(ivec)=.true.
+               call set_cms_stuff(mohdr)
+               if (ickkw.eq.3) call set_FxFx_scale(-3,p,nFKSprocess)
+               call set_alphaS(p)
+               call include_multichannel_enhance(2,n1_amp2,ev_amp2,norad_amp2)
+               sudakov_damp=probne
+               call sreal_store(p,xi_i_fks_ev,y_ij_fks_ev,fx_ev,ret_amp_split
+     $              ,real_amp_split
+     $              ,n1_amp_split,n1_ans_cnt,n1_amp_split_cnt,n1_saveamp
+     $              ,coll_n1_amp_split,coll_n1_cnt
+     $              ,coll_n1_split_cnt,coll_n1_saveamp)
+               call compute_real_emission(p,sudakov_damp,ret_amp_split,fx_ev)
+            endif
+c Update the shower starting scale with the shape from the MC
+c subtraction terms.
+            call include_shape_in_shower_scale(p,iFKS,ifold_counter)
+            call set_colour_connections(iFKS,ifold_counter)
+         enddo
+ 12      continue
+         MCcnt_vec(ivec)=MCcntcalled
+         if (icontr.gt.icontr_bfr) then
+            if(icontr_bfr.eq.0) icontr_bfr=1
+            ! write(*,*) "icontr increased from ",icontr_bfr," to ",icontr
+            do i=icontr_bfr,icontr
+               vector_index(i)=ivec
+            enddo
+         else if(icontr.lt.icontr_bfr) then
+            write (*,*) "ERROR: icontr decreased!! (driver_mintMC.f)"
+            stop 1
+         endif
+      enddo
+      elseif(ifl.eq.2) then
+         if (ifold_counter .ne.
+     $       ifold(ifold_energy)*ifold(ifold_yij)*ifold(ifold_phi)) then
+            write (*,*) "ERROR in folding parameters (driver_mintMC.f)"
+     $           ,ifold_counter,ifold_energy,ifold_yij,ifold_phi
+            write (*,*) ifold(:)
+            stop 1
+         endif
+c Special check: in rare cases there can be S-event contributions,
+c without a single FKS configuration that contains a soft singularity
+c passing cuts (this only happens if n-body configuration does not pass
+c the cuts and DELTA (from complete_xmcsubt) is not equal to 1). Need to
+c add a bogus contribution corresponding to an FKS configuration that
+c contains a soft singularity to make sure that the code continues
+c correctly.
+         call special_check_SoftSing(proc_map(proc_map(0,1),1))
+c Include PDFs and alpha_S and reweight to include the uncertainties
+         call include_PDF_and_alphas
+c Include the weight from the bias_function
+         call include_bias_wgt
+c Sum the contributions that can be summed before taking the ABS value
+         call sum_identical_contributions
+c Update the shower starting scale for the S-events after we have
+c determined which contributions are identical.
+         call update_shower_scale_Sevents(ifold_counter,ifold_picked)
+         do ivec=1,vector_size
+            call fill_mint_function_NLOPS_vec(n1body_wgt,ivec)
+            call fill_MC_integer(1,proc_map(0,1),n1body_wgt*vol1)
+         enddo
       endif
       return
       end

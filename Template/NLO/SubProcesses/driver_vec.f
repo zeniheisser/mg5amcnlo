@@ -45,6 +45,137 @@ C Momenta
 C Arguments
         integer proc_map(0:fks_configs,0:fks_configs)
         double precision x(99), rwgt, vol1
+        double precision x_loc(99)
+        integer vector_size, sum, iconfig
+C Local variables
+        integer i,ivec,iFKS,k,icoup,curr_ind,nFKS_picked_nbody,nFKS_in,nFKS_out
+        double precision dummy_jac
+        logical passcuts,passcuts_nbody,passcuts_n1body
+        external passcuts
+C Local parameters
+        integer izero,ione,itwo,mohdr
+        parameter (izero=0,ione=1,itwo=2,mohdr=-100)
+        integer indent, coup_step
+        save coup_step
+
+        ! if (ini_fin_fks.eq.0) then
+        !     dummy_jac=1d0
+        !  else
+        !     dummy_jac=0.5d0
+        !  endif
+      if (coup_step.eq.0) then
+         coup_step=4*FKS_configs + 1
+         write(*,*) 'Entering generate_momenta_vec with vector_size = ', vector_size
+      endif
+      do ivec=1,vector_size
+         indent=(ivec -1)*coup_step
+C ZW: Generate momenta and running couplings
+         nFKS_picked_nbody=proc_map(proc_map(0,1),1)
+         if (sum.eq.0) then
+c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
+            nFKS_in=nFKS_picked_nbody
+            call get_born_nFKSprocess(nFKS_in,nFKS_out)
+            nFKS_picked_nbody=nFKS_out
+         endif
+         nbody=.true.
+         call update_fks_dir(nFKS_picked_nbody)
+         dummy_jac=1d0
+         call generate_momenta(nndim,iconfig,dummy_jac,x,p)
+        !  if (p_born(0,1).lt.0d0) goto 12
+         call set_alphaS(p1_cnt(0,1,0))
+         call set_alphaS_vec(p1_cnt(0,1,0),indent + coup_step)
+         spb(:,:,0,ivec) = p_born(:,:)
+         sp1_cnt(:,:,0,ivec) = p1_cnt(:,:,0)
+         passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
+         passcuts_born_vec(ivec)=passcuts_nbody
+         nbody=.false.
+
+         do i=1,proc_map(proc_map(0,1),0)
+            iFKS=proc_map(proc_map(0,1),i)
+            icoup = indent + 4*(iFKS - 1) + 1
+            call update_fks_dir(iFKS)
+            dummy_jac=1d0
+            ! icolup_s(1,1)=-1    ! set colour connection to -1: i.e., complete_xmcsubt has not been called
+            call generate_momenta(nndim,iconfig,dummy_jac,x,p)
+            if (p_born(0,1).lt.0d0) cycle
+            ! call set_cms_stuff(izero)
+            ! if (ickkw.eq.3) call set_FxFx_scale(-2,p1_cnt(0,1,0),nFKSprocess)
+            passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
+            passcuts_nbody_vec(iFKS,ivec)=passcuts_nbody
+            ! call set_cms_stuff(mohdr)
+            ! if (ickkw.eq.3) call set_FxFx_scale(-3,p,nFKSprocess)
+            passcuts_n1body=passcuts(p,rwgt)
+            passcuts_n1body_vec(iFKS,ivec)=passcuts_n1body
+            call set_alphaS(p_born_ev)
+            call set_alphaS_vec(p_born_ev,icoup)
+            spb_ev(:,:,iFKS,ivec) = p_born_ev(:,:)
+            call set_alphaS(p_born_norad)
+            call set_alphaS_vec(p_born_norad,icoup + 1)
+            spb_norad(:,:,iFKS,ivec) = p_born_norad(:,:)
+            call set_alphaS(p1_cnt(0,1,0))
+            call set_alphaS_vec(p1_cnt(0,1,0),icoup + 2)
+            spb(:,:,iFKS,ivec) = p_born(:,:)
+            do k=1,nexternal-1
+               p_born_rot(0,k)=p_born(0,k)
+               p_born_rot(1,k)=-p_born(1,k)
+               p_born_rot(2,k)=p_born(2,k)
+               p_born_rot(3,k)=-p_born(3,k)
+            enddo
+            spb_rot(:,:,iFKS,ivec) = p_born_rot(:,:)
+            sp1_cnt(:,:,iFKS,ivec) = p1_cnt(:,:,0)
+            spb_coll(:,:,iFKS,ivec) = p_born_coll(:,:)
+            call set_alphaS(p)
+            call set_alphaS_vec(p,icoup + 3)
+            sp1(:,:,iFKS,ivec) = p(:,:)
+         enddo
+      enddo
+      return
+      end
+
+      subroutine generate_momenta_vector(iconfig,sum,proc_map,rwgt,vol1,vector_size)
+        use driver_vec
+        ! use mint_module
+        implicit none
+C Included files for process information
+        include 'nexternal.inc'
+        include 'nFKSconfigs.inc'
+        include 'run.inc'
+        include 'orders.inc'
+        include 'fks_info.inc'
+        include 'genps.inc'
+        include 'born_nhel.inc'
+C Common blocks for sigint variables not passed as arguments
+        logical       nbody
+        common/cnbody/nbody
+        integer         nndim
+        common/tosigint/nndim
+        character*4      abrv
+        common /to_abrv/ abrv
+        double precision p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
+        double precision pswgt_cnt(-2:2),jac_cnt(-2:2)
+        common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+        integer              nFKSprocess
+        common/c_nFKSprocess/nFKSprocess
+        integer             ini_fin_fks
+        common/fks_channels/ini_fin_fks
+        integer icolup_s(2,nexternal-1),icolup_h(2,nexternal)
+        common /colour_connections/ icolup_s,icolup_h
+        logical calculatedBorn
+        common/ccalculatedBorn/calculatedBorn
+C Momenta
+        double precision p_born(0:3,nexternal-1), p_born_rot(0:3,nexternal-1)
+        common /pborn/   p_born
+        double precision p_born_coll(0:3,nexternal-1)
+        common/pborn_coll/p_born_coll
+        double precision p_born_ev(0:3,nexternal-1)
+        common/pborn_ev/ p_born_ev
+        double precision p_born_norad(0:3,nexternal-1)
+        common/pborn_norad/p_born_norad
+        double precision p(0:3,nexternal)
+C Arguments
+        integer proc_map(0:fks_configs,0:fks_configs)
+        double precision x(99), rwgt, vol1
+        double precision x_loc(99)
         integer vector_size, sum, iconfig
 C Local variables
         integer i,ivec,iFKS,k,icoup,curr_ind,nFKS_picked_nbody,nFKS_in,nFKS_out
@@ -66,6 +197,7 @@ C Local parameters
          write(*,*) 'Entering generate_momenta_vec with vector_size = ', vector_size
       endif
       do ivec=1,vector_size
+         x(:) = x_vegas_vec(:,ivec)
          indent=(ivec -1)*coup_step
 C ZW: Generate momenta and running couplings
          nFKS_picked_nbody=proc_map(proc_map(0,1),1)
@@ -127,7 +259,7 @@ c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
       end
 
 
-      subroutine amplitudes_vec(proc_map,rwgt,vector_size,nFKS_nbody,skip_iter)
+      subroutine amplitudes_vec(proc_map,rwgt,vector_size,nFKS_nbody)
         use driver_vec
         implicit none
 C Included files for process information
@@ -235,8 +367,8 @@ C Local parameters
          write(*,*) 'Entering amplitudes_vec with vector_size = ', vector_size
       endif
 
-      skip_iter = .false.
       do ivec=1,vector_size
+         skip_iter = .false.
          indent=(ivec -1)*coup_step
         do i=1,proc_map(proc_map(0,1),0)
             iFKS=proc_map(proc_map(0,1),i)
@@ -265,6 +397,7 @@ C            call update_fks_dir(iFKS)
      $                    ,icoup+1,iFKS)
                snorad_amp2(:,iFKS,ivec)=norad_amp2(:)
                calculatedBorn=.false.
+               ! if (.not.passcuts_nbody_vec(iFKS,ivec)) goto 51
                call sborn_amp_vec(p_born_coll,coll_amp2,coll_jamp2,coll_amp_split
      $                    ,coll_amp_split_cnt,wgt_coll,coll_ans_cnt,coll_saveamp
      $                    ,icoup+2,iFKS)
@@ -309,7 +442,8 @@ C            call update_fks_dir(iFKS)
                sn1_ans_cnt(:,:,iFKS,ivec)=n1_ans_cnt(:,:)
                sn1_saveamp(:,:,iFKS,ivec)=n1_saveamp(:,:)
             ! endif
-            ! if (passcuts_n1body) then
+51          continue
+            ! if (passcuts_n1body_vec(iFKS,ivec)) then
                call smatrix_real_vec(p,real_amp_split,fx_ev,icoup+3, iFKS)
                sreal_amp_split(:,iFKS,ivec)=real_amp_split(:)
                sfx_ev(iFKS,ivec)=fx_ev
@@ -321,9 +455,10 @@ c Pick the first one because that's the one with the soft singularity
          p_born(:,:) = spb(:,:,0,ivec)
          p1_cnt(:,:,0) = sp1_cnt(:,:,0,ivec)
          if (p_born(0,1).lt.0d0) skip_iter = .true.
+         ! skip_iter_vec(ivec) = skip_iter
             if (skip_iter) cycle
          ! p_born_nb(:,:) = p_born(:,:)
-         passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
+         ! if (.not.passcuts_born_vec(ivec)) goto 52
          calculatedBorn=.false.
          call sborn_amp_vec(p_born,born_amp2,born_jamp2,born_amp_split
      $                     ,born_amp_split_cnt,wgt_born,born_ans_cnt,born_saveamp
@@ -336,7 +471,7 @@ c Pick the first one because that's the one with the soft singularity
          sborn_ans_cnt(:,:,ivec)=born_ans_cnt(:,:)
          sborn_saveamp(:,:,ivec)=born_saveamp(:,:)
          swgt_born(ivec)=wgt_born
-12       continue
+52       continue
       enddo
 
       return

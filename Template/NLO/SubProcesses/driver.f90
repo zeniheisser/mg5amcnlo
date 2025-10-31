@@ -5,6 +5,15 @@ module driver_vec
   integer, public :: driver_vector_size = 0
   ! surrounding infrastructure variables
   integer, allocatable, public :: MCcnt_vec(:)
+  double precision, allocatable, public :: x_mint_vec(:,:)
+  double precision, allocatable, public :: x_vegas_vec(:,:)
+  double precision, allocatable, public :: x_save_vec(:,:,:)
+  double precision, allocatable, public :: f_vec(:,:)
+  logical, allocatable, public :: skip_iter_vec(:)
+  logical, allocatable, public :: pass_cuts_check_vec(:)
+  logical, allocatable, public :: passcuts_born_vec(:)
+  logical, allocatable, public :: passcuts_nbody_vec(:,:)
+  logical, allocatable, public :: passcuts_n1body_vec(:,:)
   ! n-body kinematics Borns
   double precision, allocatable, public :: snb_amp2(:,:,:)
   double precision, allocatable, public :: snb_jamp2(:,:,:)
@@ -62,9 +71,10 @@ module driver_vec
     public :: allocate_storage, reset_storage, deallocate_storage
 
  contains
- subroutine allocate_storage(vector_size)
+ subroutine allocate_storage(vector_size,ndimmax,max_fold,nintegrals)
    implicit none
    integer, intent(in) :: vector_size
+   integer, intent(in) :: ndimmax,max_fold,nintegrals
     include 'nexternal.inc'
     include 'nFKSconfigs.inc'
    include 'genps.inc'
@@ -73,6 +83,14 @@ module driver_vec
     driver_vector_size = vector_size
     ! surrounding infrastructure variables
     allocate(MCcnt_vec(vector_size))
+    allocate(x_mint_vec(ndimmax,vector_size))
+    allocate(x_vegas_vec(99,vector_size))
+    allocate(x_save_vec(ndimmax,max_fold,vector_size))
+    allocate(f_vec(nintegrals,vector_size))
+    allocate(pass_cuts_check_vec(vector_size))
+    allocate(passcuts_born_vec(vector_size))
+    allocate(passcuts_nbody_vec(FKS_configs,vector_size))
+    allocate(passcuts_n1body_vec(FKS_configs,vector_size))
    ! n-body kinematics Borns
    allocate(snb_amp2(ngraphs,FKS_configs,vector_size))
    allocate(snb_jamp2(0:ncolor,FKS_configs,vector_size))
@@ -196,6 +214,14 @@ subroutine deallocate_storage()
     driver_vector_size = 0
     ! surrounding infrastructure variables
     if (allocated(MCcnt_vec)) deallocate(MCcnt_vec)
+    if (allocated(x_mint_vec)) deallocate(x_mint_vec)
+    if (allocated(x_vegas_vec)) deallocate(x_vegas_vec)
+    if (allocated(x_save_vec)) deallocate(x_save_vec)
+    if (allocated(f_vec)) deallocate(f_vec)
+    if (allocated(pass_cuts_check_vec)) deallocate(pass_cuts_check_vec)
+    if (allocated(passcuts_born_vec)) deallocate(passcuts_born_vec)
+    if (allocated(passcuts_nbody_vec)) deallocate(passcuts_nbody_vec)
+    if (allocated(passcuts_n1body_vec)) deallocate(passcuts_n1body_vec)
     ! n-body kinematics Borns
     if (allocated(snb_amp2)) deallocate(snb_amp2)
     if (allocated(snb_jamp2)) deallocate(snb_jamp2)

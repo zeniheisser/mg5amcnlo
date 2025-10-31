@@ -219,6 +219,53 @@ contains
     call finalise_mint
   end subroutine mint
 
+  
+  subroutine mint_vec(fun)
+   use driver_vec
+    implicit none
+    integer kpoint
+    double precision :: vol
+    double precision, dimension(ndimmax) :: x
+    integer, dimension(ndimmax) :: kfold
+    double precision, external :: fun
+    logical :: enough_points,channel_loop_done
+    integer :: vector_size, ivec
+    call initialise_mint
+    f_vec(:,:)=0d0 ! make sure f_vec is zeroed to begin with
+      if(driver_vector_size.eq.0) call allocate_storage(1,ndimmax,max_fold,nintegrals)
+      vector_size=driver_vector_size
+    do while (nit.lt.itmax)
+       call start_iteration
+2      kpoint_iter=kpoint_iter+1
+       do kpoint=1,ncalls
+          new_point=.true.
+          call get_channel
+          do ivec=1,vector_size
+             call get_random_x(x,vol,kfold)
+             x_mint_vec(:,ivec)=x
+          enddo
+          call compute_integrand_vec(fun,vol)
+          do ivec=1,vector_size
+             x(:)=x_mint_vec(:,ivec)
+             f(:)=f_vec(:,ivec)
+             pass_cuts_check=pass_cuts_check_vec(ivec)
+             call accumulate_the_point(x)
+          enddo
+       enddo
+       call get_amount_of_points(enough_points)
+       if (.not.enough_points) goto 2
+       if (imode.eq.0 .and. nit.eq.1 .and. double_events) then
+          call check_for_special_channels_loop(channel_loop_done)
+          if (.not.channel_loop_done) goto 2
+          call combine_results_channels_special_loop
+       else
+          call combine_results_channels
+       endif
+       call update_accumulated_results
+    enddo
+    call finalise_mint
+  end subroutine mint_vec
+
   subroutine initialise_mint
     implicit none
     if (imode.ne.0) call read_grids_from_file
@@ -812,6 +859,52 @@ contains
        f(1:nintegrals)=f1(1:nintegrals)
     endif
   end subroutine compute_integrand
+
+  
+  subroutine compute_integrand_vec(fun,vol)
+    use driver_vec
+    implicit none
+    integer :: ifirst,iret
+    integer, dimension(ndimmax) :: kfold
+    double precision :: dummy,vol
+    double precision, dimension(nintegrals) :: f1
+    double precision, dimension(ndimmax) :: x
+    double precision, external :: fun
+    integer :: ivec, vector_size
+    ! contribution to integral
+    ifirst=0
+    vector_size = driver_vector_size
+    if(vector_size.eq.0) then
+         write(*,*) 'ERROR: driver_vector_size not set in compute_integrand_vec'
+         stop 1
+    endif
+    if(imode.eq.0) then
+       dummy=fun(vol,ifirst)
+       if (.not. fixed_order) dummy=fun(vol,2)
+       f(1:nintegrals)=f_vec(1:nintegrals,1)
+    else
+       f(1:nintegrals)=0d0
+       f_vec(1:nintegrals,1:vector_size)=0d0
+       kfold(1:ndim)=1
+1      continue
+       ! this accumulated value will not be used
+       dummy=fun(vol,ifirst)
+       ifirst=1
+       call nextlexi(ifold,kfold,iret)
+       if(iret.eq.0) then
+          do ivec=1,vector_size
+            x(:) = x_mint_vec(:,ivec)
+             call get_random_x_next_fold(x,vol,kfold)
+             x_mint_vec(:,ivec) = x(:)
+          enddo
+          goto 1
+       endif
+       !closing call: accumulated value with correct sign
+       ifirst=2
+       dummy=fun(vol,2)
+       f(1:nintegrals)=f_vec(1:nintegrals,1)
+    endif
+  end subroutine compute_integrand_vec
   
   subroutine get_random_x(x,vol,kfold)
     implicit none

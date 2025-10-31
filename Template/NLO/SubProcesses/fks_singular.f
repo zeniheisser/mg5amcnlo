@@ -3797,6 +3797,110 @@ c n1body_wgt is used for the importance sampling over FKS directories
       end
 
 
+      subroutine fill_mint_function_NLOPS_vec(n1body_wgt,ivec)
+c Fills the function that is returned to the MINT integrator. Depending
+c on the imode we should or should not include the virtual corrections.
+      use weight_lines
+      use mint_module
+      use driver_vec
+      implicit none
+      include 'nexternal.inc'
+      include 'orders.inc'
+      integer i,j,ict,iamp,ithree,isix
+      double precision f(nintegrals),sigint,sigint1,sigint_ABS
+     $     ,n1body_wgt,tmp_wgt,max_weight
+      double precision virtual_over_born
+      common /c_vob/   virtual_over_born
+      integer ivec
+      sigint=0d0
+      sigint1=0d0
+      sigint_ABS=0d0
+      n1body_wgt=0d0
+      max_weight=0d0
+      if (icontr.eq.0) then
+         sigint_ABS=0d0
+         sigint=0d0
+         sigint1=0d0
+      else
+         do i=1,icontr
+            if(vector_index(i).ne.ivec) cycle
+            sigint=sigint+wgts(1,i)
+            max_weight=max(max_weight,abs(wgts(1,i)))
+            if (icontr_sum(0,i).eq.0) cycle
+            do j=1,niproc(i)
+               sigint_ABS=sigint_ABS+abs(unwgt(j,i))
+               sigint1=sigint1+unwgt(j,i) ! for consistency check
+               max_weight=max(max_weight,abs(unwgt(j,i)))
+            enddo
+         enddo
+c check the consistency of the results up to machine precision (10^-10 here)
+         if (imode.ne.1 .or. only_virt) then
+            if (abs((sigint-sigint1)/max_weight).gt.1d-10) then
+               write (*,*) 'ERROR: inconsistent integrals #0',sigint
+     $              ,sigint1,max_weight,abs((sigint-sigint1)/max_weight)
+               do i=1, icontr
+                  write (*,*) i,icontr_sum(0,i),niproc(i),wgts(1,i)
+     $                 ,H_event(i),itype(i),nFKS(i)
+                  if (icontr_sum(0,i).eq.0) cycle
+                  do j=1,niproc(i)
+                     write (*,*) j,unwgt(j,i)
+                  enddo
+               enddo
+               stop 1
+            endif
+         else
+            sigint1=sigint1+virt_wgt_mint(0)
+            if (abs((sigint-sigint1)/max_weight).gt.1d-10) then
+               write (*,*) 'ERROR: inconsistent integrals #1',sigint
+     $              ,sigint1,max_weight,abs((sigint-sigint1)/max_weight)
+     $              ,virt_wgt_mint
+               do i=1, icontr
+                  write (*,*) i,icontr_sum(0,i),niproc(i),wgts(1,i)
+                  if (icontr_sum(0,i).eq.0) cycle
+                  do j=1,niproc(i)
+                     write (*,*) j,unwgt(j,i)
+                  enddo
+               enddo
+               stop 1
+            endif
+         endif
+c n1body_wgt is used for the importance sampling over FKS directories
+         do i=1,icontr
+            if (icontr_sum(0,i).eq.0) cycle
+            tmp_wgt=0d0
+            do j=1,icontr_sum(0,i)
+               ict=icontr_sum(j,i)
+               if ( itype(ict).ne.2  .and. itype(ict).ne.3 .and.
+     $              itype(ict).ne.14 .and. itype(ict).ne.15)
+     $                              tmp_wgt=tmp_wgt+wgts(1,ict)
+            enddo
+            n1body_wgt=n1body_wgt+abs(tmp_wgt)
+         enddo
+      endif
+      f_vec(1,ivec)=sigint_ABS
+      f_vec(2,ivec)=sigint
+      f_vec(4,ivec)=virtual_over_born
+      do iamp=0,amp_split_size
+         if (iamp.eq.0) then
+            f_vec(3,ivec)=0d0
+            f_vec(6,ivec)=0d0
+            f_vec(5,ivec)=0d0
+            do i=1,amp_split_size
+               f_vec(3,ivec)=f_vec(3,ivec)+virt_wgt_mint(i)
+               f_vec(6,ivec)=f_vec(6,ivec)+born_wgt_mint(i)
+            enddo
+            f_vec(5,ivec)=abs(f_vec(3,ivec))!v3.5.4, this fixes a wrong behaviour
+         else
+            ithree=2*iamp+5
+            isix=2*iamp+6
+            f_vec(ithree,ivec)=virt_wgt_mint(iamp)
+            f_vec(isix,ivec)=born_wgt_mint(iamp)
+         endif
+      enddo
+      return
+      end
+
+
       subroutine pick_unweight_contr(iFKS_picked,ifold_picked)
 c Randomly pick (weighted by the ABS values) the contribution to a given
 c PS point that should be written in the event file.
