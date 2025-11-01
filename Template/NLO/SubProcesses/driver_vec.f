@@ -197,8 +197,8 @@ C Local parameters
          write(*,*) 'Entering generate_momenta_vec with vector_size = ', vector_size
       endif
       do ivec=1,vector_size
-         x(:) = x_vegas_vec(:,ivec)
          indent=(ivec -1)*coup_step
+         x(:) = x_vegas_vec(:,ivec)
 C ZW: Generate momenta and running couplings
          nFKS_picked_nbody=proc_map(proc_map(0,1),1)
          if (sum.eq.0) then
@@ -216,6 +216,8 @@ c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
          call set_alphaS_vec(p1_cnt(0,1,0),indent + coup_step)
          spb(:,:,0,ivec) = p_born(:,:)
          sp1_cnt(:,:,0,ivec) = p1_cnt(:,:,0)
+         passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
+         passcuts_born_vec(ivec)=passcuts_nbody
          nbody=.false.
 
          do i=1,proc_map(proc_map(0,1),0)
@@ -229,9 +231,11 @@ c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
             ! call set_cms_stuff(izero)
             ! if (ickkw.eq.3) call set_FxFx_scale(-2,p1_cnt(0,1,0),nFKSprocess)
             passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
+            passcuts_nbody_vec(iFKS,ivec)=passcuts_nbody
             ! call set_cms_stuff(mohdr)
             ! if (ickkw.eq.3) call set_FxFx_scale(-3,p,nFKSprocess)
             passcuts_n1body=passcuts(p,rwgt)
+            passcuts_n1body_vec(iFKS,ivec)=passcuts_n1body
             call set_alphaS(p_born_ev)
             call set_alphaS_vec(p_born_ev,icoup)
             spb_ev(:,:,iFKS,ivec) = p_born_ev(:,:)

@@ -1834,6 +1834,12 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
             integer nfksprocess
             common/c_nfksprocess/nfksprocess
             """
+        # the pdf wrapper
+        text1_vec = \
+            """\n\ndouble precision function dlum_vec(nfksprocess)
+            implicit none
+            integer nfksprocess
+            """
 
         if matrix_element.real_processes:
             for n, info in enumerate(matrix_element.get_fks_info_list()):
@@ -1848,6 +1854,10 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
                 text1 += \
                     """if (nfksprocess.eq.%(n)d) then
                     call dlum_%(n_me)d(dlum)
+                    else""" % {'n': n + 1, 'n_me' : info['n_me']}
+                text1_vec += \
+                    """if (nfksprocess.eq.%(n)d) then
+                    call dlum_%(n_me)d(dlum_vec)
                     else""" % {'n': n + 1, 'n_me' : info['n_me']}
 
             text += \
@@ -1865,6 +1875,11 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
             text1 += \
                 """
                 write(*,*) 'ERROR: invalid n in dlum :', nfksprocess\n stop\n endif
+                return \nend
+                """
+            text1_vec += \
+                """
+                write(*,*) 'ERROR: invalid n in dlum_vec :', nfksprocess\n stop\n endif
                 return \nend
                 """
         else:
@@ -1886,11 +1901,18 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
                 return
                 end
                 """
+            text1_vec += \
+                """
+                call dlum_0(dlum_vec)
+                return
+                end
+                """
 
         # Write the file
         writer_me.writelines(text)
         writer_me.writelines(text_vec)
         writer_lum.writelines(text1)
+        writer_lum.writelines(text1_vec)
         return 0
 
 

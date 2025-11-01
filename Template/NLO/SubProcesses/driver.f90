@@ -5,6 +5,7 @@ module driver_vec
   integer, public :: driver_vector_size = 0
   ! surrounding infrastructure variables
   integer, allocatable, public :: MCcnt_vec(:)
+  double precision, allocatable, public :: vegas_wgt_vec(:)
   double precision, allocatable, public :: x_mint_vec(:,:)
   double precision, allocatable, public :: x_vegas_vec(:,:)
   double precision, allocatable, public :: x_save_vec(:,:,:)
@@ -14,6 +15,7 @@ module driver_vec
   logical, allocatable, public :: passcuts_born_vec(:)
   logical, allocatable, public :: passcuts_nbody_vec(:,:)
   logical, allocatable, public :: passcuts_n1body_vec(:,:)
+  double precision, allocatable, public :: virt_wgt_vec(:,:), born_wgt_vec(:,:)
   ! n-body kinematics Borns
   double precision, allocatable, public :: snb_amp2(:,:,:)
   double precision, allocatable, public :: snb_jamp2(:,:,:)
@@ -71,10 +73,10 @@ module driver_vec
     public :: allocate_storage, reset_storage, deallocate_storage
 
  contains
- subroutine allocate_storage(vector_size,ndimmax,max_fold,nintegrals)
+ subroutine allocate_storage(vector_size,ndimmax,max_fold,nintegrals,n_ave_virt)
    implicit none
    integer, intent(in) :: vector_size
-   integer, intent(in) :: ndimmax,max_fold,nintegrals
+   integer, intent(in) :: ndimmax,max_fold,nintegrals,n_ave_virt
     include 'nexternal.inc'
     include 'nFKSconfigs.inc'
    include 'genps.inc'
@@ -83,6 +85,7 @@ module driver_vec
     driver_vector_size = vector_size
     ! surrounding infrastructure variables
     allocate(MCcnt_vec(vector_size))
+    allocate(vegas_wgt_vec(vector_size))
     allocate(x_mint_vec(ndimmax,vector_size))
     allocate(x_vegas_vec(99,vector_size))
     allocate(x_save_vec(ndimmax,max_fold,vector_size))
@@ -91,6 +94,9 @@ module driver_vec
     allocate(passcuts_born_vec(vector_size))
     allocate(passcuts_nbody_vec(FKS_configs,vector_size))
     allocate(passcuts_n1body_vec(FKS_configs,vector_size))
+    ! Virtual and born weights for MINT
+    allocate(virt_wgt_vec(n_ave_virt,vector_size))
+    allocate(born_wgt_vec(n_ave_virt,vector_size))
    ! n-body kinematics Borns
    allocate(snb_amp2(ngraphs,FKS_configs,vector_size))
    allocate(snb_jamp2(0:ncolor,FKS_configs,vector_size))
@@ -152,6 +158,9 @@ subroutine reset_storage()
   implicit none
    include 'nFKSconfigs.inc'
    include 'born_nhel.inc'
+   ! Born and virtual storage reset
+   virt_wgt_vec(:,:) = 0d0
+    born_wgt_vec(:,:) = 0d0
    ! n-body kinematics Borns
    snb_amp2(:,:,:) = 0d0
    snb_jamp2(:,:,:) = 0d0
@@ -214,6 +223,7 @@ subroutine deallocate_storage()
     driver_vector_size = 0
     ! surrounding infrastructure variables
     if (allocated(MCcnt_vec)) deallocate(MCcnt_vec)
+    if (allocated(vegas_wgt_vec)) deallocate(vegas_wgt_vec)
     if (allocated(x_mint_vec)) deallocate(x_mint_vec)
     if (allocated(x_vegas_vec)) deallocate(x_vegas_vec)
     if (allocated(x_save_vec)) deallocate(x_save_vec)

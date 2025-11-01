@@ -144,7 +144,7 @@ c
         n1(i)=0
       enddo
 
-      vector_size = 1
+      vector_size = 2
       vector_size_wgt = vector_size
 
       call setrun                !Sets up run parameters
@@ -155,7 +155,7 @@ c
       call fill_configurations_common
       call check_amp_split 
       if(.not.driver_is_allocated) 
-     $  call allocate_storage(vector_size,ndimmax,max_fold,nintegrals)
+     $  call allocate_storage(vector_size,ndimmax,max_fold,nintegrals,n_ave_virt)
       if(.not.couplings_is_allocated)
      $  call allocate_couplings(vector_size*(4*FKS_configs + 1))
 c     
@@ -1196,7 +1196,7 @@ c determined which contributions are identical.
       return
       end
 
-      function sigintF_vec(vegas_wgt,ifl)
+      function sigintF_vec(ifl)
       use couplings
       use driver_vec
       use weight_lines
@@ -1405,7 +1405,7 @@ c "npNLO".
       if (ifl.eq.0 .or. ifl.eq.1) then
          if (ifl.eq.0) then
             icontr=0
-            if(allocated(itype_vec)) call reset_weight_lines_vec(nexternal)
+            call reset_weight_lines_vec(nexternal)
             virt_wgt_mint(0:amp_split_size)=0d0
             born_wgt_mint(0:amp_split_size)=0d0
             virtual_over_born=0d0
@@ -1420,7 +1420,6 @@ c "npNLO".
             call update_vegas_x(xx,x)
             x_vegas_vec(:,ivec)=x
          enddo
-         call update_vegas_x(xx,x)
          do i=1,nndim
             x_save(i,ifold_counter)=x(i)
             do ivec=1,vector_size
@@ -1435,8 +1434,8 @@ C  Randomly chooses the FKS configuration to work on (proc_map(0,1))
 C ZW: Reset all the storage arrays
          call reset_storage()
 
-         call generate_momenta_vec(iconfig,sum,proc_map
-     $        ,x,rwgt,vol1,vector_size)
+         call generate_momenta_vector(iconfig,sum,proc_map
+     $        ,rwgt,vol1,vector_size)
 
 
 c The nbody contributions
@@ -1458,6 +1457,10 @@ c The nbody contributions
          if(allocated(itype_vec)) call retrieve_weight_lines(nexternal,ivec)
          call update_fks_dir(nFKS_picked_nbody)
          MCcntcalled=MCcnt_vec(ivec)
+         vegas_wgt=vegas_wgt_vec(ivec)
+         x(:)=x_vegas_vec(:,ivec)
+         virt_wgt_mint(:)=virt_wgt_vec(:,ivec)
+         born_wgt_mint(:)=born_wgt_vec(:,ivec)
          icontr_bfr=icontr
          icolup_s(1,1)=-1 ! set colour connection to -1: i.e., complete_xmcsubt has not been called
          if (ini_fin_fks.eq.0) then
@@ -1688,7 +1691,11 @@ c subtraction terms.
          !    write (*,*) "ERROR: icontr decreased!! (driver_mintMC.f)"
          !    stop 1
          ! endif
+         ! ZW: THERE'S A PROBLEM WITH WEIGHT_LINES_VEC!!! IN THE FIRST ITERATION, NEED TO PROPERLY DELINIEATE BETWEEN DIFFERENT IVEC!!!!
          if(allocated(itype)) call append_weight_lines(nexternal,ivec)
+         virt_wgt_vec(:,ivec)=virt_wgt_mint
+         born_wgt_vec(:,ivec)=born_wgt_mint
+         vegas_wgt_vec(ivec)=vegas_wgt
       enddo
       elseif(ifl.eq.2) then
          if (ifold_counter .ne.
@@ -1706,8 +1713,15 @@ c add a bogus contribution corresponding to an FKS configuration that
 c contains a soft singularity to make sure that the code continues
 c correctly.
          do ivec=1,vector_size
+            ! write(*,*) "--------------------------------------------"
+            ! write(*,*) " Special check for ifl=2, ivec=",ivec
+            ! write(*,*) "--------------------------------------------"
             if(allocated(itype_vec)) call retrieve_weight_lines(nexternal,ivec)
             f(:) = f_vec(:,ivec)
+            virt_wgt_mint(:)=virt_wgt_vec(:,ivec)
+            born_wgt_mint(:)=born_wgt_vec(:,ivec)
+            MCcntcalled=MCcnt_vec(ivec)
+            vegas_wgt=vegas_wgt_vec(ivec)
             call special_check_SoftSing(proc_map(proc_map(0,1),1))
 c Include PDFs and alpha_S and reweight to include the uncertainties
             call include_PDF_and_alphas
@@ -1722,6 +1736,10 @@ c determined which contributions are identical.
             call fill_MC_integer(1,proc_map(0,1),n1body_wgt*vol1)
             f_vec(:,ivec) = f(:)
             if(allocated(itype)) call append_weight_lines(nexternal,ivec)
+            MCcnt_vec(ivec)=MCcntcalled
+            vegas_wgt_vec(ivec)=vegas_wgt
+            virt_wgt_vec(:,ivec)=virt_wgt_mint
+            born_wgt_vec(:,ivec)=born_wgt_mint
          enddo
       endif
       return
@@ -1737,8 +1755,9 @@ c summed explicitly and which by MC-ing.
       include 'run.inc'
       include 'genps.inc'
       include 'nFKSconfigs.inc'
-      double precision lum,dlum
+      double precision lum,dlum,dlum_vec
       external dlum
+      external dlum_vec
       logical found_ini1,found_ini2,found_fnl
       integer proc_map(0:fks_configs,0:fks_configs)
      $     ,j_fks_proc(fks_configs),i_fks_pdg_proc(fks_configs)
@@ -1766,7 +1785,7 @@ c summed explicitly and which by MC-ing.
 c Set Bjorken x's to some random value before calling the dlum() function
          xbk(1)=0.5d0
          xbk(2)=0.5d0
-         lum=dlum()  ! updates IPROC
+         lum=dlum_vec(nFKSprocess)  ! updates IPROC
       enddo
       write (*,*) 'Total number of FKS directories is', fks_configs
 c For sum over identical FKS pairs, need to find the identical structures

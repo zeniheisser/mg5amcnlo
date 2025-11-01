@@ -2192,10 +2192,10 @@ c or to fill histograms.
       integer i,j,k,iamp,icontr_orig
       logical virt_found
       double precision xlum,dlum,pi,mu2_r,mu2_f,mu2_q,rwgt_muR_dep_fac
-     $     ,wgt_wo_pdf,conv
+     $     ,wgt_wo_pdf,conv, dlum_vec
       external rwgt_muR_dep_fac
       parameter (pi=3.1415926535897932385d0)
-      external dlum
+      external dlum, dlum_vec
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
       INTEGER              IPROC
@@ -2220,7 +2220,7 @@ c call to separate_flavour_config().
          q2fact(1)=mu2_f
          q2fact(2)=mu2_f
 c call the PDFs
-         xlum = dlum()
+         xlum = dlum_vec(nFKSprocess)
 c iwgt=1 is the central value (i.e. no scale/PDF reweighting).
          iwgt=1
          call weight_lines_allocated(nexternal,max_contr,iwgt,iproc)
@@ -3727,6 +3727,7 @@ c on the imode we should or should not include the virtual corrections.
                sigint_ABS=sigint_ABS+abs(unwgt(j,i))
                sigint1=sigint1+unwgt(j,i) ! for consistency check
                max_weight=max(max_weight,abs(unwgt(j,i)))
+               ! write(*,*) 'Debug: unwgt(',j,',',i,') = ',unwgt(j,i)
             enddo
          enddo
 c check the consistency of the results up to machine precision (10^-10 here)
