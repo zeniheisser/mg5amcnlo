@@ -4041,6 +4041,168 @@ c soft singularity with the FKS configuration randomly chosen.
       return
       end
 
+      subroutine pick_unweight_contr_vec(iFKS_picked,ifold_picked,ivec_picked)
+c Randomly pick (weighted by the ABS values) the contribution to a given
+c PS point that should be written in the event file.
+      use weight_lines
+      use weight_lines_vec
+      use driver_vec
+      implicit none
+      include 'nexternal.inc'
+      include 'genps.inc'
+      include 'nFKSconfigs.inc'
+      include 'fks_info.inc'
+      include 'timing_variables.inc'
+      integer i,j,k,l,iFKS_picked,ict,ifold_picked,jj,ii
+      double precision tot_sum,rnd,ran2,current,target
+      external ran2
+      integer           i_process_addwrite
+      common/c_addwrite/i_process_addwrite
+      logical         Hevents
+      common/SHevents/Hevents
+      logical                 dummy
+      double precision evtsgn
+      common /c_unwgt/ evtsgn,dummy
+      integer iproc_save(fks_configs),eto(maxproc,fks_configs)
+     $     ,etoi(maxproc,fks_configs),maxproc_found
+      common/cproc_combination/iproc_save,eto,etoi,maxproc_found
+      integer              nFKSprocess
+      common/c_nFKSprocess/nFKSprocess
+      double precision     SCALUP(fks_configs*2)
+      common /cshowerscale/SCALUP
+      double precision     SCALUP_a(fks_configs*2,nexternal,nexternal)
+      common /cshowerscale_a/SCALUP_a
+      integer colour_connections(2,nexternal)
+      common /colour_connections_to_write/ colour_connections
+      double precision tmp_wgt(fks_configs),sum_granny_wgt
+      logical write_granny(fks_configs)
+      integer which_is_granny(fks_configs)
+      common/write_granny_resonance/which_is_granny,write_granny
+      integer need_matching(nexternal)
+      common /c_need_matching_to_write/ need_matching
+
+      integer ivec, ivec_picked
+      logical non_zero_contr
+
+
+      call cpu_time(tBefore)
+      if (icontr.eq.0) then
+         do ivec=1,driver_vector_size
+            if(icontr_vec(ivec).ne.0) non_zero_contr=.true.
+         enddo
+         if(.not.non_zero_contr) return
+      endif
+      tot_sum=0d0
+      do ivec=1,driver_vector_size
+         do i=1,icontr_vec(ivec)
+            do j=1,niproc_vec(i,ivec)
+               tot_sum=tot_sum+abs(unwgt_vec(j,i,ivec))
+            enddo
+         enddo   
+      enddo
+      rnd=ran2()
+      current=0d0
+      target=rnd*tot_sum
+      i=1
+      j=0
+      ivec_picked=1
+      do while (current.lt.target)
+         j=j+1
+         if (mod(j,niproc_vec(i,ivec_picked)+1).eq.0) then
+            j=1
+            i=i+1
+         endif
+         if (i.gt.icontr_vec(ivec_picked)) then
+            i=1
+            ivec_picked=ivec_picked+1
+            if (ivec_picked.gt.driver_vector_size) then
+               write(*,*) 'ERROR in pick_unweight_contr_vec: ivec_picked'
+               stop 1
+            endif
+         endif
+         current=current+abs(unwgt_vec(j,i,ivec_picked))
+      enddo
+c found the contribution that should be written:
+      call retrieve_weight_lines(nexternal,ivec_picked)
+      icontr_picked=i
+      iproc_picked=j
+      if (H_event(icontr_picked)) then
+         Hevents=.true.
+         i_process_addwrite=iproc_picked
+         iFKS_picked=nFKS(icontr_picked)
+         ifold_picked=ifold_cnt(icontr_picked)
+         SCALUP(iFKS_picked*2)=shower_scale(icontr_picked)
+         do k=1,nexternal
+            do l=1,nexternal
+               SCALUP_a(iFKS_picked*2,k,l)=shower_scale_a(icontr_picked
+     $              ,k,l)
+            enddo
+         enddo
+         colour_connections(1:2,1:nexternal)=icolour_con(1:2
+     $        ,1:nexternal,icontr_picked)
+      else
+         Hevents=.false.
+         i_process_addwrite=etoi(iproc_picked,nFKS(icontr_picked))
+c For S-events, ifold_picked is already set in
+c update_shower_scale_Sevents(). Note that for S-events, the fold chosen
+c doesn't really matter.
+c$$$         ifold_picked=ifold_cnt(icontr_picked)
+         do k=1,icontr_sum(0,icontr_picked)
+            ict=icontr_sum(k,icontr_picked)
+            !MZif (particle_type_d(nFKS(ict),fks_i_d(nFKS(ict))).eq.8) then
+            if (need_color_links_d(nFKS(ict)).or.need_charge_links_d(nFKS(ict))) then
+               iFKS_picked=nFKS(ict)
+               exit
+            endif
+            if (k.eq.icontr_sum(0,icontr_picked)) then
+               write (*,*) 'ERROR: no configuration with i_fks a gluon'
+               stop 1
+            endif
+         enddo
+         SCALUP(iFKS_picked*2-1)=shower_scale(icontr_picked)
+         do k=1,nexternal
+            do l=1,nexternal
+               SCALUP_a(iFKS_picked*2-1,k,l)
+     $              =shower_scale_a(icontr_picked,k,l)
+            enddo
+         enddo
+         colour_connections(1:2,1:nexternal)=icolour_con(1:2,1:nexternal
+     $        ,icontr_picked)
+c Determine if we need to write the granny (based only on the special
+c mapping in genps_fks) randomly, weighted by the seperate contributions
+c that are summed together in a single S-event.
+         do i=1,fks_configs
+            tmp_wgt(i)=0d0
+         enddo
+c fill tmp_wgt with the sum of weights per FKS configuration
+         do k=1,icontr_sum(0,icontr_picked)
+            ict=icontr_sum(k,icontr_picked)
+            tmp_wgt(nFKS(ict))=tmp_wgt(nFKS(ict))+wgts(1,ict)
+         enddo
+c Randomly select an FKS configuration
+         sum_granny_wgt=0d0
+         do i=1,fks_configs
+            sum_granny_wgt=sum_granny_wgt+abs(tmp_wgt(i))
+         enddo
+         target=ran2()*sum_granny_wgt
+         current=0d0
+         i=0
+         do while (current.le.target)
+            i=i+1
+            current=current+abs(tmp_wgt(i))
+         enddo
+c Overwrite the granny information of the FKS configuration with the
+c soft singularity with the FKS configuration randomly chosen.
+         write_granny(iFKS_picked)=write_granny(i)
+         which_is_granny(iFKS_picked)=which_is_granny(i)
+      endif
+      evtsgn=sign(1d0,unwgt(iproc_picked,icontr_picked))
+      need_matching(1:nexternal)=need_match(1:nexternal,icontr_picked)
+      call cpu_time(tAfter)
+      t_p_unw=t_p_unw+(tAfter-tBefore)
+      return
+      end
+
 
       subroutine fill_rwgt_lines
 c Fills the lines, n_ctr_str, to be written in an event file with the

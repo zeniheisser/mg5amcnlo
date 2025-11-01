@@ -97,7 +97,7 @@ c general MadFKS parameters
 
       include 'nFKSconfigs.inc'
 
-      integer vector_size
+      integer vector_size, ivec
 
 C-----
 C  BEGIN CODE
@@ -301,41 +301,41 @@ c fill the information for the write_header_init common block
 
          write (*,*) 'imode is ',imode
          vn=-1
-         call gen(sigintF,0,vn,x)
+         call gen_vec(sigintF_vec,0,vn)
          do j=1,ncalls0
             if (abrv(1:4).eq.'born') then
                vn=3
-               call gen(sigintF,1,vn,x)
+               call gen_vec(sigintF_vec,1,vn)
             else
                if (ran2().lt.ans(5,1)/(ans(1,1)+ans(5,1)) .or. only_virt) then
                   abrv='virt'
                   if (only_virt) then
                      vn=2
-                     call gen(sigintF,1,vn,x)
+                     call gen_vec(sigintF_vec,1,vn)
                   else
                      vn=1
-                     call gen(sigintF,1,vn,x)
+                     call gen_vec(sigintF_vec,1,vn)
                   endif
                else
                   abrv='novi'
                   vn=2
-                  call gen(sigintF,1,vn,x)
+                  call gen_vec(sigintF_vec,1,vn)
                endif
             endif
 c Randomly pick the contribution that will be written in the event file
-            call pick_unweight_contr(iFKS_picked,ifold_picked)
+            call pick_unweight_contr_vec(iFKS_picked,ifold_picked,ivec)
             call update_fks_dir(iFKS_picked)
             if (event_norm(1:4).eq.'bias') then
                call include_inverse_bias_wgt(inv_bias)
                weight=event_weight*inv_bias
             endif
             call fill_rwgt_lines
-            call finalize_event(x_save(1,ifold_picked),weight,lunlhe
-     $           ,putonshell)
+            call finalize_event(x_save_vec(1,ifold_picked,ivec),weight,lunlhe
+     $           ,putonshell, ivec)
          enddo
          call deallocate_weight_lines
          vn=-1
-         call gen(sigintF,3,vn,x) ! print counters generation efficiencies
+         call gen_vec(sigintF_vec,3,vn) ! print counters generation efficiencies
          write (lunlhe,'(a)') "</LesHouchesEvents>"
          close(lunlhe)
       endif

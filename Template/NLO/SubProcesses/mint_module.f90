@@ -1712,17 +1712,19 @@ contains
 10     continue
        new_point=.true.
        do ivec=1,vector_size
-       if (vn.eq.1) then
-          call get_random_cell_flat(x,vol)
-       else
-          call get_weighted_cell(x,vol)
-       endif
-      enddo
-       call compute_integrand(fun,x,vol)
-       call increase_gen_counters_middle(vn)
-       call check_upper_bound(vn,found_point)
+         if (vn.eq.1) then
+            call get_random_cell_flat(x,vol)
+         else
+            call get_weighted_cell(x,vol)
+         endif
+         x_mint_vec(:,ivec)=x
+         vegas_wgt_vec(ivec)=vol
+       enddo
+       call compute_integrand_vec(fun)
+       call increase_gen_counters_middle_vec(vn,vector_size)
+       call check_upper_bound_vec(vn,found_point)
        if (.not.found_point) goto 10
-       call increase_gen_counters_end(vn)
+       call increase_gen_counters_end_vec(vn,vector_size)
     else
        write (*,*) "Unknown gen_mode in gen (from mint_module)",gen_mode
        stop 1
@@ -1829,6 +1831,33 @@ contains
        found_point=.true.
     endif
   end subroutine check_upper_bound
+
+  
+  subroutine check_upper_bound_vec(vn,found_point)
+   use driver_vec
+    implicit none
+    logical :: found_point
+    integer :: vn
+    integer :: ivec
+    found_point=.false.
+    do ivec=1,driver_vector_size
+      if (f_vec(1,ivec).gt.upper_bound) then
+         if (vn.eq.2) then
+            gen_counters(7)=gen_counters(7)+1
+         elseif (vn.eq.1) then
+            gen_counters(8)=gen_counters(8)+1
+         elseif(vn.eq.3) then
+            gen_counters(9)=gen_counters(9)+1
+         endif
+      endif
+      upper_bound=upper_bound*ran3(.false.)
+      if (upper_bound.gt.f_vec(1,ivec)) then
+         gen_counters(10)=gen_counters(10)+1
+      else
+         found_point=.true.
+      endif
+   enddo
+  end subroutine check_upper_bound_vec
   
   subroutine get_random_cell_flat(x,vol)
     implicit none

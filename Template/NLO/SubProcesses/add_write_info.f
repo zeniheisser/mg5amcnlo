@@ -1,7 +1,9 @@
       subroutine add_write_info(p_born,pp,ybst_til_tolab,iconfig,Hevents
-     &     ,putonshell,ndim,x,jpart,npart,pb,shower_scale,shower_scale_a)
+     &     ,putonshell,ndim,x,jpart,npart,pb,shower_scale,shower_scale_a
+     &     ,ivec)
 c Computes all the info needed to write out the events including the
 c intermediate resonances. It also boosts the events to the lab frame
+      use driver_vec
       implicit none
       include "genps.inc"
       include "nexternal.inc"
@@ -40,11 +42,12 @@ c Random numbers
       external ran2
 
 c Jamp amplitudes of the Born (to be filled with a call the sborn())
-      double Precision amp2(ngraphs), jamp2(0:ncolor)
-      complex*16 dummy_ans_cnt(2,nsplitorders)
-      DOUBLE PRECISION DUMMY_AMP_SPLIT(AMP_SPLIT_SIZE)
-      DOUBLE COMPLEX DUMMY_AMP_SPLIT_CNT(AMP_SPLIT_SIZE,2,NSPLITORDERS)
-      double complex ret_saveamp(ngraphs,max_bhel)
+      double Precision jamp2(0:ncolor)
+      ! double Precision amp2(ngraphs), jamp2(0:ncolor)
+      ! complex*16 dummy_ans_cnt(2,nsplitorders)
+      ! DOUBLE PRECISION DUMMY_AMP_SPLIT(AMP_SPLIT_SIZE)
+      ! DOUBLE COMPLEX DUMMY_AMP_SPLIT_CNT(AMP_SPLIT_SIZE,2,NSPLITORDERS)
+      ! double complex ret_saveamp(ngraphs,max_bhel)
 C      common/to_amps/  amp2,       jamp2
 
 C iforest and other configuration info. Read once and saved.
@@ -141,6 +144,8 @@ c pt_clust string
       common /c_is_aorg/is_aorg
       logical split_type(nsplitorders) 
       common /c_split_type/split_type
+
+      integer ivec
 c
 c Set the leshouche info and fks info
 c
@@ -279,9 +284,8 @@ c$$$   read(hel_buf,'(15i5)') (jpart(7,i),i=1,nexternal)
       if (colour_connections(1,1).lt.0) then
          ! colour not yet set: Get color flow that is consistent with
          ! iconfig from Born
-         amp2(:) = 0d0
-         jamp2(:) = 0d0
-         call sborn_amp(p_born,amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,wgt1,dummy_ans_cnt,ret_saveamp)
+         ! ZW: use stored value of jamp2 --- may need smarter logic if cuts are applied before evaluation later
+         jamp2(:) = sborn_jamp2(:,ivec)
          sumborn=0.d0
          do i=1,max_bcol
             if (icolamp(i,iBornGraph,1)) then
