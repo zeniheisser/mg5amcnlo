@@ -144,7 +144,7 @@ c
         n1(i)=0
       enddo
 
-      vector_size = 2
+      vector_size = 1
       vector_size_wgt = vector_size
 
       call setrun                !Sets up run parameters

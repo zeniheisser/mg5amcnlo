@@ -113,6 +113,56 @@ c======================================================================
       return
       end
 
+
+      subroutine BinothLHA_vec(p,born_wgt,virt_wgt,amp_split_born,loc_saveamp
+     $    ,amp_split_finite,born_amp_split_cnt)
+c
+c Given the Born momenta, this is the Binoth-Les Houches interface file
+c that calls the OLP and returns the virtual weights. For convenience
+c also the born_wgt is passed to this subroutine.
+c
+C************************************************************************
+c
+      implicit none
+      include "nexternal.inc"
+      include "coupl.inc"
+      include 'genps.inc'
+      double precision pi
+      parameter (pi=3.1415926535897932385d0)
+      double precision p(0:3,nexternal-1)
+      double precision virt_wgt,born_wgt,double,single,virt_wgts(3)
+      double precision mu,ao2pi,conversion,alpha_S
+      save conversion
+      logical firsttime,firsttime_conversion
+      data firsttime,firsttime_conversion /.true.,.true./
+      integer           isum_hel
+      logical                   multi_channel
+      common/to_matrix/isum_hel, multi_channel
+      double precision qes2
+      common /coupl_es/ qes2
+      logical fksprefact
+      parameter (fksprefact=.true.)
+      double precision tolerance, madfks_single, madfks_double
+      parameter (tolerance = 1d-6)
+      integer nbad, nbadmax
+      parameter (nbadmax = 5)
+      data nbad / 0 /
+      include 'orders.inc'
+      include 'born_nhel.inc'
+      integer iamp
+      double precision amp_split_born(1:amp_split_size)
+      double precision amp_split_finite(amp_split_size)
+      double complex born_amp_split_cnt(amp_split_size,2,nsplitorders)
+      double complex loc_saveamp(ngraphs,max_bhel)
+C      common /to_amp_split_finite/amp_split_finite
+
+      call BinothLHA(p,born_wgt,virt_wgt,amp_split_born,loc_saveamp
+     $    ,amp_split_finite,born_amp_split_cnt)
+
+      return
+      end
+
+
       subroutine BinothLHAInit(filename)
       implicit none
       include "nexternal.inc"

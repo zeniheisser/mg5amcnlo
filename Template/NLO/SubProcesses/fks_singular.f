@@ -7754,8 +7754,8 @@ C setup the fks i/j info
          call fks_inc_chooser()
 C the following call to born is to setup the goodhel(nfksprocess)
 C ZW: should be removed when initital tests are separated from evaluations
-         calculatedBorn = .false.
-         call sborn_amp(p_born,amp2,jamp2,ret_amp_split,ret_amp_split_cnt,wgt1,ans_cnt,ret_saveamp)
+C         ! calculatedBorn = .false.
+C         ! call sborn_amp(p_born,amp2,jamp2,ret_amp_split,ret_amp_split_cnt,wgt1,ans_cnt,ret_saveamp)
          contr=0d0
          do i=1,fks_j_from_i(i_fks,0)
             do j=1,i
@@ -7767,7 +7767,8 @@ c To be sure that color-correlated Borns work well, we need to have
 c *always* a call to sborn(p_born,wgt) just before. This is okay,
 c because there is a call above in this subroutine
 C wgt includes the gs/w^2
-                  call sborn_sf(p_born,m,n,wgt,ans_cnt,ret_amp_split_cnt,ret_saveamp,amp_split_soft) 
+                  call sborn_sf_store(p_born,m,n,wgt,ans_cnt,ret_amp_split_cnt
+     &                               ,ret_saveamp,amp_split_soft) 
                   if (wgt.ne.0d0) then
                      call eikonal_Ireg(p,m,n,xicut_used,eikIreg)
                      contr=contr+wgt*eikIreg
@@ -7822,7 +7823,8 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
          if ((ran2().le.virtual_fraction(ichan) .and.
      $        abrv(1:3).ne.'nov').or.abrv(1:4).eq.'virt') then
             call cpu_time(tBefore)
-            Call BinothLHA(p_born,born_wgt,virt_wgt,ret_amp_split,ret_saveamp,amp_split_finite_ML,ret_amp_split_cnt)
+            Call BinothLHA(p_born,born_wgt,virt_wgt,ret_amp_split
+     $                        ,ret_saveamp,amp_split_finite_ML,ret_amp_split_cnt)
             do iamp=1,amp_split_size
                amp_split_virt(iamp)=amp_split_finite_ML(iamp)
             enddo
@@ -8009,7 +8011,7 @@ c we need the pure NLO terms only
          print*,"           "
          write(*,123)((p(i,j),i=0,3),j=1,nexternal)
          xmu2=q2fact(1)
-         call getpoles(p,xmu2,double,single,fksprefact,ret_amp_split_cnt)
+         call getpoles_vec(p,xmu2,double,single,fksprefact,ret_amp_split_cnt)
          print*,"BORN",born_wgt!/conv
          print*,"DOUBLE",double
          print*,"SINGLE",single
@@ -8490,6 +8492,235 @@ C restore need_color/charge_links
 c
       return
       end
+
+      
+      subroutine getpoles_vec(p,xmu2,double,single,fksprefact,ret_amp_split_cnt)
+c Returns the residues of double and single poles according to 
+c eq.(B.1) and eq.(B.2) if fksprefact=.true.. When fksprefact=.false.,
+c the prefactor (mu2/Q2)^ep in eq.(B.1) is expanded, and giving an
+c extra contribution to the single pole
+      implicit none
+      include "genps.inc"
+      include 'nexternal.inc'
+c      include "fks.inc"
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
+      double precision particle_charge(nexternal), particle_charge_born(nexternal-1)
+      common /c_charges/particle_charge
+      common /c_charges_born/particle_charge_born
+      logical particle_tag(nexternal)
+      common /c_particle_tag/particle_tag
+      include 'coupl.inc'
+      include 'q_es.inc'
+      double precision p(0:3,nexternal),xmu2,double,single
+      logical fksprefact
+      double precision c(0:1),gamma(0:1),gammap(0:1),gamma_ph,gammap_ph
+      common/fks_colors/c,gamma,gammap,gamma_ph,gammap_ph
+      double precision p_born(0:3,nexternal-1)
+      common/pborn/p_born
+      integer i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+      double precision wgt1
+      double precision born,wgt,kikj,dot,vij,aso2pi,aeo2pi
+      double precision contr1, contr2
+      integer aj,i,j,m,n,ilink,k
+      double precision pmass(nexternal),zero,pi
+      parameter (pi=3.1415926535897932385d0)
+      parameter (zero=0d0)
+      include 'orders.inc'
+      include 'born_nhel.inc'
+      double precision amp_split_poles_FKS(amp_split_size,2)
+      common /to_amp_split_poles_FKS/amp_split_poles_FKS
+      double precision soft_prefactor
+      double precision amp_split_soft(amp_split_size)
+      double precision amp2(ngraphs), jamp2(0:ncolor)
+      complex*16 ans_cnt(2, nsplitorders)
+      DOUBLE PRECISION DUMMY_AMP_SPLIT(AMP_SPLIT_SIZE)
+      DOUBLE COMPLEX RET_AMP_SPLIT_CNT(AMP_SPLIT_SIZE,2,NSPLITORDERS)
+      DOUBLE COMPLEX DUMMY_AMP_SPLIT_CNT(AMP_SPLIT_SIZE,2,NSPLITORDERS)
+      double complex ret_saveamp(ngraphs,max_bhel)
+
+c      common /c_born_cnt/ ans_cnt
+      logical need_color_links, need_charge_links
+      common /c_need_links/need_color_links, need_charge_links
+      logical calculatedBorn
+      common /ccalculatedBorn/ calculatedBorn
+      double precision oneo8pi2
+      parameter(oneo8pi2 = 1d0/(8d0*pi**2))
+      include "nFKSconfigs.inc"
+      INTEGER nFKSprocess, nFKSprocess_save, nFKSprocess_col, nFKSprocess_chg
+      COMMON/c_nFKSprocess/nFKSprocess
+      logical need_color_links_used, need_charge_links_used
+      double precision soft_fact
+
+      include "pmass.inc"
+
+      nFKSprocess_col = 0
+      nFKSprocess_chg = 0
+
+      need_color_links_used = .false.
+      need_charge_links_used = .false.
+      
+C check if any real emission need cahrge/color links
+      nFKSprocess_save = nFKSprocess
+      do nFKSprocess = 1, FKS_configs
+        call fks_inc_chooser()
+        need_color_links_used = need_color_links_used .or. need_color_links
+        need_charge_links_used = need_charge_links_used .or. need_charge_links
+C keep track of which FKS configuration actually needs color/charge
+C links
+        if (need_color_links.and.nFKSprocess_col.eq.0)
+     1          nFKSprocess_col = nFKSprocess
+        if (need_charge_links.and.nFKSprocess_chg.eq.0)
+     1          nFKSprocess_chg = nFKSprocess
+      enddo
+      nFKSprocess = nFKSprocess_save
+      call fks_inc_chooser()
+
+      double=0.d0
+      single=0.d0
+      ! reset the amp_split_poles_FKS
+      do i=1,amp_split_size
+        amp_split_poles_FKS(i,1)=0d0
+        amp_split_poles_FKS(i,2)=0d0
+      enddo
+      aso2pi=g**2/(8d0*pi**2)
+      aeo2pi=dble(gal(1))**2/(8d0*pi**2)
+      dummy_amp_split_cnt(:,:,:) = ret_amp_split_cnt(:,:,:)
+c QCD Born terms
+      contr1 = 0d0
+      contr2 = 0d0
+      born=dble(ans_cnt(1,qcd_pos))
+      do i=1,nexternal
+        if(i.ne.i_fks .and. particle_type(i).ne.1)then
+          if (particle_type(i).eq.8) then
+             aj=0
+          elseif(abs(particle_type(i)).eq.3) then
+             aj=1
+          endif
+          if(pmass(i).eq.ZERO)then
+            contr2=contr2-c(aj)
+            contr1=contr1-gamma(aj)
+          else
+            contr1=contr1-c(aj)
+          endif
+        endif
+      enddo
+
+      double=double+contr2*born*aso2pi
+      single=single+contr1*born*aso2pi
+
+      do i=1,amp_split_size
+        amp_split_poles_FKS(i,1) = amp_split_poles_FKS(i,1)+
+     %      dble(dummy_amp_split_cnt(i,1,qcd_pos))*contr1*aso2pi
+        amp_split_poles_FKS(i,2) = amp_split_poles_FKS(i,2)+
+     %      dble(dummy_amp_split_cnt(i,1,qcd_pos))*contr2*aso2pi
+      enddo
+
+c QED Born terms
+      contr1 = 0d0
+      contr2 = 0d0
+      born=dble(ans_cnt(1,qed_pos))
+      do i=1,nexternal
+        if(i.ne.i_fks.and.(particle_charge(i).ne.0d0.or.pdg_type(i).eq.22))then
+          if(pmass(i).eq.ZERO)then
+            if (pdg_type(i).ne.22) then
+              contr2=contr2-particle_charge(i)**2
+              contr1=contr1-3d0/2d0*particle_charge(i)**2
+            elseif (.not.particle_tag(i)) then
+              contr1=contr1-gamma_ph
+            endif
+          else
+            contr1=contr1-particle_charge(i)**2
+          endif
+        endif
+      enddo
+
+      double=double+contr2*born*aeo2pi
+      single=single+contr1*born*aeo2pi
+
+      do i=1,amp_split_size
+        amp_split_poles_FKS(i,1) = amp_split_poles_FKS(i,1)+
+     %      dble(dummy_amp_split_cnt(i,1,qed_pos))*contr1*aeo2pi
+        amp_split_poles_FKS(i,2) = amp_split_poles_FKS(i,2)+
+     %      dble(dummy_amp_split_cnt(i,1,qed_pos))*contr2*aeo2pi
+      enddo
+
+c Colour and charge-linked Born terms
+      nFKSprocess_save = nFKSprocess
+      do ilink = 1, 2
+        if (ilink.eq.1) then
+          if (.not. need_color_links_used) cycle
+          need_color_links = .true.
+          need_charge_links = .false.
+          nFKSprocess=nFKSprocess_col
+        else
+          if (.not. need_charge_links_used) cycle
+          need_color_links = .false.
+          need_charge_links = .true.
+          nFKSprocess=nFKSprocess_chg
+        endif
+
+C setup the fks i/j info
+        call fks_inc_chooser()
+C the following call to born is to setup the goodhel(nfksprocess)
+C        calculatedBorn = .false.
+C        call sborn_amp(p_born,amp2,jamp2,DUMMY_AMP_SPLIT,DUMMY_AMP_SPLIT_CNT,wgt1,ans_cnt,ret_saveamp)
+
+        contr1=0d0
+        do i=1,fks_j_from_i(i_fks,0)
+          do j=1,i
+            m=fks_j_from_i(i_fks,i)
+            n=fks_j_from_i(i_fks,j)
+            if( m.ne.n .and. n.ne.i_fks .and. m.ne.i_fks )then
+C wgt includes the gs/w^2 factor
+              call sborn_sf_store(p_born,m,n,wgt,ans_cnt,DUMMY_AMP_SPLIT_CNT,ret_saveamp,amp_split_soft)
+c The factor -2 compensate for that missing in sborn_sf
+              wgt=-2d0*wgt
+              if(wgt.ne.0.d0)then
+                if(pmass(m).eq.zero.and.pmass(n).eq.zero)then
+                  kikj=dot(p(0,n),p(0,m))
+                  soft_fact=dlog(2d0*kikj/QES2)
+                elseif(pmass(m).ne.zero.and.pmass(n).eq.zero)then
+                  kikj=dot(p(0,n),p(0,m))
+                  soft_fact=-0.5d0*dlog(pmass(m)**2/QES2)+dlog(2d0*kikj/QES2)
+                elseif(pmass(m).eq.zero.and.pmass(n).ne.zero)then
+                  kikj=dot(p(0,n),p(0,m))
+                  soft_fact=-0.5d0*dlog(pmass(n)**2/QES2)+dlog(2d0*kikj/QES2)
+                elseif(pmass(m).ne.zero.and.pmass(n).ne.zero)then
+                  kikj=dot(p(0,n),p(0,m))
+                  vij=dsqrt(1d0-(pmass(n)*pmass(m)/kikj)**2)
+                  if (vij .gt. 1d-6) then
+                    soft_fact=0.5d0*1/vij*log((1+vij)/(1-vij))
+                  else
+                    soft_fact=(1d0+vij**2/3d0+vij**4/5d0)
+                  endif
+                else
+                  write(*,*)'Error in getpoles',i,j,n,m,pmass(n),pmass(m)
+                  stop
+                endif
+                contr1=contr1+soft_fact*wgt
+                do k=1,amp_split_size
+                  amp_split_poles_FKS(k,1)=amp_split_poles_FKS(k,1)+
+     $             amp_split_soft(k)*(-2d0)*soft_fact*oneo8pi2
+                enddo
+              endif
+            endif
+          enddo
+        enddo
+        single=single+contr1*oneo8pi2
+      enddo
+
+C restore need_color/charge_links
+      nFKSprocess = nFKSprocess_save
+      call fks_inc_chooser()
+
+      if(.not.fksprefact)single=single+double*dlog(xmu2/QES2)
+c
+      return
+      end
+
 
 
       subroutine setfksfactor(match_to_shower)
