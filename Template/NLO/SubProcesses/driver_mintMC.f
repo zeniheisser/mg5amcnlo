@@ -147,6 +147,9 @@ c
       vector_size = 1
       vector_size_wgt = vector_size
 
+      
+!$ call omp_set_num_thread(vector_size)
+
       call setrun                !Sets up run parameters
       call setpara('param_card.dat')   !Sets up couplings and masses
       call setcuts               !Sets up cuts and particle masses
@@ -1461,9 +1464,13 @@ c The nbody contributions
             nFKS_picked_nbody=nFKS_out
          endif
 
-         call amplitudes_vec(proc_map,rwgt,vector_size
-     $        ,nFKS_picked_nbody)
 
+         do ivec=1,vector_size
+            call amplitudes_ivec(proc_map,rwgt,vector_size
+     $            ,nFKS_picked_nbody,ivec)
+         enddo
+
+         
       do ivec=1,vector_size
          if(allocated(itype_vec)) call retrieve_weight_lines(nexternal,ivec)
          call update_fks_dir(nFKS_picked_nbody)
