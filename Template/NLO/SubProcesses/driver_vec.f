@@ -262,6 +262,44 @@ c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
       return
       end
 
+      subroutine set_goodhel(nndim,iconfig)
+C For each FKS config, generates momenta and calls sborn_amp and smatrix_real
+C which have write-access to the GOODHEL arrays, while the vectorised routines do not
+         use driver_vec
+         implicit none
+         include 'nexternal.inc'
+         include 'nFKSconfigs.inc'
+         include 'run.inc'
+         include 'orders.inc'
+         include 'fks_info.inc'
+         include 'genps.inc'
+         include 'born_nhel.inc'
+
+         integer nndim, iconfig         
+         logical calculatedBorn
+         common/ccalculatedBorn/calculatedBorn
+         double precision p_born(0:3,nexternal-1), p(0:3,nexternal)
+         common /pborn/   p_born
+         integer              nFKSprocess
+         common/c_nFKSprocess/nFKSprocess
+         integer iFKS, k, ivec, save_nFKSprocess
+         double precision dummy_jac, dummy_ans, dummy_amp_split(amp_split_size)
+         double precision x(99)
+
+         save_nFKSprocess = nFKSprocess
+         dummy_jac=1d0
+         do ivec=1,driver_vector_size
+           x(:) = x_vegas_vec(:,ivec)
+           do nFKSprocess=1,FKS_configs
+             call update_fks_dir(nFKSprocess)
+             call generate_momenta(nndim,iconfig,dummy_jac,x,p)
+             calculatedBorn=.false.
+             call sborn(p_born, dummy_ans)
+             call smatrix_real(p, dummy_amp_split, dummy_ans)
+           enddo
+          enddo
+         nFKSprocess = save_nFKSprocess
+      end
 
       subroutine amplitudes_vec(proc_map,rwgt,vector_size,nFKS_nbody)
         use driver_vec

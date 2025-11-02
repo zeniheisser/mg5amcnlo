@@ -43,12 +43,6 @@ c Random numbers
 
 c Jamp amplitudes of the Born (to be filled with a call the sborn())
       double Precision jamp2(0:ncolor)
-      ! double Precision amp2(ngraphs), jamp2(0:ncolor)
-      ! complex*16 dummy_ans_cnt(2,nsplitorders)
-      ! DOUBLE PRECISION DUMMY_AMP_SPLIT(AMP_SPLIT_SIZE)
-      ! DOUBLE COMPLEX DUMMY_AMP_SPLIT_CNT(AMP_SPLIT_SIZE,2,NSPLITORDERS)
-      ! double complex ret_saveamp(ngraphs,max_bhel)
-C      common/to_amps/  amp2,       jamp2
 
 C iforest and other configuration info. Read once and saved.
       integer itree_S_t(2,-max_branch:-1),sprop_tree_S_t(-max_branch:-1)

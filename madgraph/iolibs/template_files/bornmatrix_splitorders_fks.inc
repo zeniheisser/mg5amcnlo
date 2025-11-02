@@ -262,9 +262,9 @@ amp2b(:) = 0.0
 jamp2b(:,:) = 0.0
 jamp2b(0,0) = %(ncolor)d
 
-if (firsttime) then
-  call FIRSTTIME_SETUP(firsttime)
-endif
+C if (firsttime) then
+C   call FIRSTTIME_SETUP(firsttime)
+C endif
 
 CALL SBORN_SPLITORDERS_VEC(P,AMP2B,JAMP2B,ANS,ret_saveamp,ivec,ifks)
 
@@ -728,23 +728,17 @@ C
       LOGICAL GOODHEL(NCOMB,%(nconfs)d)
       common /c_goodhel/goodhel
       double complex ret_saveamp(ngraphs,max_bhel)
-      double precision savemom(nexternal-1,2)
-      common/to_savemom/savemom
       integer skip(%(nconfs)d)
       common/cBorn/skip
-      logical calculatedBorn
-      common/ccalculatedBorn/calculatedBorn
-      integer nfksprocess
-      common/c_nfksprocess/nfksprocess
       logical cond_ij
 C ----------
 C BEGIN CODE
 C ----------
       iden=iden_values(ifks)
       glu_ij = ij_values(ifks)
-      if(DO_TRY(ifks)) then
-        call SBORN_SPLITORDERS_NTRY_VEC(P1,AMP2,JAMP2,ANS,RET_SAVEAMP,DO_TRY(ifks),IVEC,IFKS)
-      else
+C      if(DO_TRY(ifks)) then
+C        call SBORN_SPLITORDERS_NTRY_VEC(P1,AMP2,JAMP2,ANS,RET_SAVEAMP,DO_TRY(ifks),IVEC,IFKS)
+C      else
       DO JJ=1,NGRAPHS
           amp2(jj)=0d0
       ENDDO
@@ -795,7 +789,7 @@ C      endif
       ANS(2,0)=ANS(2,0)+ANS(2,I)
       ENDDO
 C      calculatedBorn=.true.
-      endif
+C      endif
       END
 
 
@@ -1322,16 +1316,9 @@ C
 C  
 C GLOBAL VARIABLES
 C  
-C      common/to_amps_born/  amp2,       jamp2
-      double complex saveamp(ngraphs,max_bhel)
-      common/to_saveamp/saveamp
       double complex ret_saveamp(ngraphs,max_bhel)
       integer skip(%(nconfs)d)
       common/cBorn/skip
-      logical calculatedBorn
-      common/ccalculatedBorn/calculatedBorn
-      integer nfksprocess
-      common/c_nfksprocess/nfksprocess
       integer step_hel
       logical cond_ij
 
@@ -1393,10 +1380,8 @@ C        endif
 %(helas_calls_vec)s
         do i=1,ngraphs
           if(ihel.eq.back_hel)then
-            saveamp(i,hell)=amp(i)
             ret_saveamp(i,hell) = amp(i)
           elseif(ihel.eq.-back_hel)then
-            saveamp(i,hell+skip(ifks))=amp(i)
             ret_saveamp(i,hell+skip(ifks)) = amp(i)
           else
             write(*,*) "ERROR #1 in born.f"

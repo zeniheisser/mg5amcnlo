@@ -76,8 +76,8 @@ C VARIABLES
 C
       INTEGER I,J
       REAL*8 ANS(0:NSQAMPSO)
-      LOGICAL KEEP_ORDER(NSQAMPSO), FIRSTTIME
-      data keep_order / NSQAMPSO*.TRUE. /
+      LOGICAL KEEP_ORDER%(proc_prefix)s(NSQAMPSO), FIRSTTIME
+      COMMON /TO_KEEP_ORDER%(proc_prefix)s/keep_order%(proc_prefix)s
       data firsttime / .TRUE. /
       integer amp_orders(nsplitorders)
       double precision ans_max, tiny
@@ -94,7 +94,8 @@ C
 C look for orders which match the nlo order constraint 
 
 if (firsttime) then
-  call firsttime%(proc_prefix)s_setup(firsttime,keep_order)
+  keep_order%(proc_prefix)s(:) = .true.
+  call firsttime%(proc_prefix)s_setup(firsttime,keep_order%(proc_prefix)s)
 endif
 
 CALL SMATRIX%(proc_prefix)s_SPLITORDERS(P,ANS)
@@ -109,7 +110,7 @@ do i = 1, nsqampso
 enddo
 
 do i = 1, nsqampso
- if (keep_order(i)) then
+ if (keep_order%(proc_prefix)s(i)) then
     ANS_SUMMED = ANS_SUMMED + ANS(I)
 C   keep track of the separate pieces correspoinding to different coupling combinations
     do j = 1, nsplitorders
@@ -160,9 +161,8 @@ C VARIABLES
 C
       INTEGER I,J
       REAL*8 ANS(0:NSQAMPSO)
-      LOGICAL KEEP_ORDER(NSQAMPSO), FIRSTTIME
-      data keep_order / NSQAMPSO*.TRUE. /
-      data firsttime / .TRUE. /
+      LOGICAL KEEP_ORDER%(proc_prefix)s(NSQAMPSO)
+      COMMON /TO_KEEP_ORDER%(proc_prefix)s/keep_order%(proc_prefix)s 
       integer amp_orders(nsplitorders)
       double precision ans_max, tiny
       parameter (tiny = 1d-12)
@@ -177,9 +177,9 @@ C
 
 C look for orders which match the nlo order constraint 
 
-if (firsttime) then
-  call firsttime%(proc_prefix)s_setup(firsttime,keep_order)
-endif
+C if (firsttime) then
+C   call firsttime%(proc_prefix)s_setup(firsttime,keep_order)
+C endif
 
 CALL SMATRIX%(proc_prefix)s_SPLITORDERS_VEC(P,ANS,IVEC)
 ans_summed = 0d0
@@ -193,7 +193,7 @@ do i = 1, nsqampso
 enddo
 
 do i = 1, nsqampso
- if (keep_order(i)) then
+ if (keep_order%(proc_prefix)s(i)) then
     ANS_SUMMED = ANS_SUMMED + ANS(I)
 C   keep track of the separate pieces correspoinding to different coupling combinations
     do j = 1, nsplitorders
@@ -271,15 +271,15 @@ C
 C  
 C LOCAL VARIABLES 
 C  
-      INTEGER IHEL,IDEN,I,J,T_IDENT(NCOMB)
+      INTEGER IHEL,IDEN,I,J,T_IDENT%(proc_prefix)s(NCOMB)
       REAL*8 T(0:NSQAMPSO),T_SAVE(NCOMB,0:NSQAMPSO)
 C      SAVE T_SAVE,T_IDENT
-      data t_ident/NCOMB*-1/
+      common /to_t_ident%(proc_prefix)s/ t_ident%(proc_prefix)s
       INTEGER NHEL(NEXTERNAL,NCOMB)
 %(helicity_lines)s
-      LOGICAL GOODHEL(NCOMB), DO_TRY
+      LOGICAL GOODHEL%(proc_prefix)s(NCOMB), DO_TRY
       DATA DO_TRY/.TRUE./
-      DATA GOODHEL/NCOMB*.FALSE./
+      COMMON /TO_GOODHEL%(proc_prefix)s/GOODHEL%(proc_prefix)s
 %(den_factor_line)s
 C ----------
 C BEGIN CODE
@@ -287,18 +287,18 @@ C ----------
       T(:) = 0d0
       T_SAVE(:,:) = 0d0 
       IF (DO_TRY) THEN
-        CALL SMATRIX%(proc_prefix)s_SPLITORDERS_NTRY(P,ANS,DO_TRY,GOODHEL,T_IDENT)
+        CALL SMATRIX%(proc_prefix)s_SPLITORDERS_NTRY(P,ANS,DO_TRY,GOODHEL%(proc_prefix)s,T_IDENT%(proc_prefix)s)
       ELSE
       DO I=0,NSQAMPSO
       	ANS(I) = 0D0	  
       ENDDO
       DO IHEL=1,NCOMB
         T(:) = 0d0
-        IF (GOODHEL(IHEL)) THEN
-            IF (T_IDENT(IHEL).GT.0) THEN
+        IF (GOODHEL%(proc_prefix)s(IHEL)) THEN
+            IF (T_IDENT%(proc_prefix)s(IHEL).GT.0) THEN
 C if two helicity states are identical, dont recompute
             DO I=0,NSQAMPSO
-              T(I)=T_SAVE(T_IDENT(IHEL),I)
+              T(I)=T_SAVE(T_IDENT%(proc_prefix)s(IHEL),I)
               T_SAVE(IHEL,I)=T(I)
             ENDDO
             ELSE
@@ -349,34 +349,34 @@ C
 C  
 C LOCAL VARIABLES 
 C  
-      INTEGER IHEL,IDEN,I,J,T_IDENT(NCOMB)
+      INTEGER IHEL,IDEN,I,J,T_IDENT%(proc_prefix)s(NCOMB)
       REAL*8 T(0:NSQAMPSO),T_SAVE(NCOMB,0:NSQAMPSO)
 C      SAVE T_SAVE,T_IDENT
-      data t_ident/NCOMB*-1/
+      common /to_t_ident%(proc_prefix)s/t_ident%(proc_prefix)s
       INTEGER NHEL(NEXTERNAL,NCOMB)
 %(helicity_lines)s
-      LOGICAL GOODHEL(NCOMB), DO_TRY
+      LOGICAL GOODHEL%(proc_prefix)s(NCOMB), DO_TRY
       DATA DO_TRY/.TRUE./
-      DATA GOODHEL/NCOMB*.FALSE./
+      COMMON /TO_GOODHEL%(proc_prefix)s/GOODHEL%(proc_prefix)s
 %(den_factor_line)s
 C ----------
 C BEGIN CODE
 C ----------
       T(:) = 0d0
       T_SAVE(:,:) = 0d0 
-      IF (DO_TRY) THEN
-        CALL SMATRIX%(proc_prefix)s_SPLITORDERS_NTRY_VEC(P,ANS,DO_TRY,GOODHEL,T_IDENT,IVEC)
-      ELSE
+C      IF (DO_TRY) THEN
+C        CALL SMATRIX%(proc_prefix)s_SPLITORDERS_NTRY_VEC(P,ANS,DO_TRY,GOODHEL%(proc_prefix)s,T_IDENT%(proc_prefix)s,IVEC)
+C      ELSE
       DO I=0,NSQAMPSO
       	ANS(I) = 0D0	  
       ENDDO
       DO IHEL=1,NCOMB
         T(:) = 0d0
-        IF (GOODHEL(IHEL)) THEN
-            IF (T_IDENT(IHEL).GT.0) THEN
+        IF (GOODHEL%(proc_prefix)s(IHEL)) THEN
+            IF (T_IDENT%(proc_prefix)s(IHEL).GT.0) THEN
 C if two helicity states are identical, dont recompute
             DO I=0,NSQAMPSO
-              T(I)=T_SAVE(T_IDENT(IHEL),I)
+              T(I)=T_SAVE(T_IDENT%(proc_prefix)s(IHEL),I)
               T_SAVE(IHEL,I)=T(I)
             ENDDO
             ELSE
@@ -395,7 +395,7 @@ C add to the sum of helicities
         ANS(I)=ANS(I)/DBLE(IDEN)
         ANS(0)=ANS(0)+ANS(I)
       ENDDO
-      ENDIF
+C      ENDIF
       END
 
 

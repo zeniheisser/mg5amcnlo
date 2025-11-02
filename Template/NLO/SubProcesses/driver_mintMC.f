@@ -1356,6 +1356,11 @@ C Real deg amplitudes
 
       logical skip_iter
 
+      logical, save :: goodhel_set
+      integer, save :: goodhel_calls
+      integer ntry_goodhel
+      data ntry_goodhel /20/
+
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
 
@@ -1433,6 +1438,12 @@ C  Randomly chooses the FKS configuration to work on (proc_map(0,1))
      
 C ZW: Reset all the storage arrays
          call reset_storage()
+
+         if(.not.goodhel_set) then
+            call set_goodhel(nndim,iconfig)
+            goodhel_calls=goodhel_calls+vector_size
+            if (goodhel_calls.ge.ntry_goodhel) goodhel_set=.true.
+         end if
 
          call generate_momenta_vector(iconfig,sum,proc_map
      $        ,rwgt,vol1,vector_size)
