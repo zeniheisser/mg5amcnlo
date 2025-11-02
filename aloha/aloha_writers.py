@@ -513,7 +513,7 @@ class ALOHAWriterForFortran(WriteALOHA):
                      'id': self.outgoing}
             self.declaration.add(('list_complex', output))
         
-        out.write('subroutine %(name)s(%(args)s,%(output)s)\n' % \
+        out.write('recursive subroutine %(name)s(%(args)s,%(output)s)\n' % \
                   {'output':output, 'name': name, 'args': ', '.join(arguments)})
         
         return out.getvalue() 

@@ -131,7 +131,7 @@ END
 
 
 
-      SUBROUTINE SMATRIX%(proc_prefix)s_AMP_VEC(P,RET_AMP_SPLIT,ANS_SUMMED,IVEC)
+      RECURSIVE SUBROUTINE SMATRIX%(proc_prefix)s_AMP_VEC(P,RET_AMP_SPLIT,ANS_SUMMED,IVEC)
 C  
 %(info_lines)s
 C
@@ -322,7 +322,7 @@ C add to the sum of helicities
 
 
 
-      SUBROUTINE SMATRIX%(proc_prefix)s_SPLITORDERS_VEC(P,ANS,IVEC)
+      RECURSIVE SUBROUTINE SMATRIX%(proc_prefix)s_SPLITORDERS_VEC(P,ANS,IVEC)
 C  
 %(info_lines)s
 C
@@ -652,7 +652,7 @@ C ----------
       END
 
 
-      SUBROUTINE MATRIX_%(proc_prefix)s_VEC(P,NHEL,RES,IVEC)
+      RECURSIVE SUBROUTINE MATRIX_%(proc_prefix)s_VEC(P,NHEL,RES,IVEC)
 C  
 %(info_lines)s
 C
@@ -742,7 +742,7 @@ C
 C Helper functions to deal with the split orders.
 C
 
-      INTEGER FUNCTION SQSOINDEX%(proc_prefix)s(AMPORDERA,AMPORDERB)
+      RECURSIVE INTEGER FUNCTION SQSOINDEX%(proc_prefix)s(AMPORDERA,AMPORDERB)
 C
 C This functions plays the role of the interference matrix. It can be hardcoded or 
 C made more elegant using hashtables if its execution speed ever becomes a relevant
@@ -781,7 +781,7 @@ C
 
 
 
-      INTEGER FUNCTION SQSOINDEX_FROM_ORDERS%(proc_prefix)s(ORDERS)
+      RECURSIVE INTEGER FUNCTION SQSOINDEX_FROM_ORDERS%(proc_prefix)s(ORDERS)
 C
 C From a list of values for the split orders, this function returns the
 c corresponding index in the squared orders canonical ordering.
@@ -821,7 +821,7 @@ C
 
 
 
-      INTEGER FUNCTION GETORDPOWFROMINDEX%(proc_prefix)s(IORDER, INDX)
+      RECURSIVE INTEGER FUNCTION GETORDPOWFROMINDEX%(proc_prefix)s(IORDER, INDX)
 C
 C Return the power of the IORDER-th order appearing at position INDX
 C in the split-orders output
@@ -861,7 +861,7 @@ C
 
 
 
-      SUBROUTINE GET_NSQSO_REAL%(proc_prefix)s(NSQSO)
+      RECURSIVE SUBROUTINE GET_NSQSO_REAL%(proc_prefix)s(NSQSO)
 C
 C     Simple subroutine returning the number of squared split order
 C     contributions returned in ANS when calling SMATRIX_SPLITORDERS

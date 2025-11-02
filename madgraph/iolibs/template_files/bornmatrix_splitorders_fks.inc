@@ -1,4 +1,4 @@
-      SUBROUTINE SBORN(P,ANS_SUMMED)
+      recursive subroutine SBORN(P,ANS_SUMMED)
 C  
 %(info_lines)s
 C
@@ -49,7 +49,7 @@ C
 
 
 
-      SUBROUTINE SBORN_AMP(P,AMP2,JAMP2,RET_AMP_SPLIT,RET_AMP_SPLIT_CNT,ANS_SUMMED,ANS_CNT,RET_SAVEAMP)
+      recursive subroutine SBORN_AMP(P,AMP2,JAMP2,RET_AMP_SPLIT,RET_AMP_SPLIT_CNT,ANS_SUMMED,ANS_CNT,RET_SAVEAMP)
 C  
 %(info_lines)s
 C
@@ -192,7 +192,7 @@ C AMP_SPLIT_CNT(:,:,:) = RET_AMP_SPLIT_CNT(:,:,:)
 END
 
 
-      SUBROUTINE SBORN_AMP_VEC(P,AMP2,JAMP2,RET_AMP_SPLIT,RET_AMP_SPLIT_CNT,ANS_SUMMED,ANS_CNT,RET_SAVEAMP,ivec,ifks)
+      recursive subroutine SBORN_AMP_VEC(P,AMP2,JAMP2,RET_AMP_SPLIT,RET_AMP_SPLIT_CNT,ANS_SUMMED,ANS_CNT,RET_SAVEAMP,ivec,IIND,ifks)
 C  
 %(info_lines)s
 C
@@ -226,7 +226,7 @@ C
       DOUBLE PRECISION RET_AMP_SPLIT(AMP_SPLIT_SIZE)
       DOUBLE COMPLEX RET_AMP_SPLIT_CNT(AMP_SPLIT_SIZE,2,NSPLITORDERS)
       double complex ret_saveamp(ngraphs,max_bhel)
-      integer ivec, ifks
+      integer ivec, ifks, IIND
 
 C
 C VARIABLES
@@ -266,7 +266,7 @@ C if (firsttime) then
 C   call FIRSTTIME_SETUP(firsttime)
 C endif
 
-CALL SBORN_SPLITORDERS_VEC(P,AMP2B,JAMP2B,ANS,ret_saveamp,ivec,ifks)
+CALL SBORN_SPLITORDERS_VEC(P,AMP2B,JAMP2B,ANS,ret_saveamp,ivec,IIND,ifks)
 
 C the born to be integrated
 ans_summed = 0d0
@@ -337,7 +337,7 @@ END
 
 
 
-      SUBROUTINE FIRSTTIME_SETUP(firsttime)
+      recursive subroutine FIRSTTIME_SETUP(firsttime)
 C  
 C CONSTANTS
 C 
@@ -432,7 +432,7 @@ endif
 
 
 
-      SUBROUTINE SBORN_ONEHEL(P,NHEL,HELL,ANS_SUMMED,RET_SAVEAMP)
+      recursive subroutine SBORN_ONEHEL(P,NHEL,HELL,ANS_SUMMED,RET_SAVEAMP)
 C  
 %(info_lines)s
 C
@@ -557,7 +557,7 @@ END
 
 
 
-SUBROUTINE SBORN_SPLITORDERS(P1,AMP2,JAMP2,ANS,RET_SAVEAMP)
+recursive subroutine SBORN_SPLITORDERS(P1,AMP2,JAMP2,ANS,RET_SAVEAMP)
 C  
 %(info_lines)s
 C
@@ -678,7 +678,7 @@ C ----------
 
 
 
-SUBROUTINE SBORN_SPLITORDERS_VEC(P1,AMP2,JAMP2,ANS,RET_SAVEAMP,IVEC,IFKS)
+recursive subroutine SBORN_SPLITORDERS_VEC(P1,AMP2,JAMP2,ANS,RET_SAVEAMP,IVEC,IIND,IFKS)
 C  
 %(info_lines)s
 C
@@ -688,6 +688,7 @@ C FOR THE POINT IN PHASE SPACE P1(0:3,NEXTERNAL-1)
 C  
 %(process_lines)s
 C
+      use driver_vec
       IMPLICIT NONE
 C  
 C CONSTANTS
@@ -708,7 +709,7 @@ C
       REAL*8 P1(0:3,NEXTERNAL-1)
       Double Precision amp2(ngraphs), jamp2(0:%(ncolor)d,0:NAMPSO)
       COMPLEX*16 ANS(2,0:NSQAMPSO)
-      integer ivec,ifks
+      integer ivec,ifks,IIND
 C  
 C LOCAL VARIABLES 
 C  
@@ -747,6 +748,7 @@ C      else
           jamp2(jj,I)=0d0
       ENDDO
       ENDDO
+      nhel_vec(1:nexternal-1,1:ncomb,iind) = nhel(:,:)
 C      if (calculatedBorn) then
 C         do j=1,nexternal-1
 C            if (savemom(j,1).ne.p1(0,j) .or. savemom(j,2).ne.p1(3,j)) then
@@ -774,7 +776,7 @@ C      endif
         !if (nhel(glu_ij,ihel).EQ.NHEL(GLU_IJ,1).or.skip(ifks).eq.0) then
         if (cond_ij) then
           IF ((GOODHEL(IHEL,ifks) .OR. GOODHEL(IHEL+SKIP(ifks),ifks)) ) THEN
-            CALL BORN_VEC(P1,NHEL(1,IHEL),IHEL,.false.,AMP2,JAMP2,T,borns,ret_saveamp,ivec,ifks)
+            CALL BORN_VEC(P1,NHEL_VEC(1,IHEL,iind),IHEL,.false.,AMP2,JAMP2,T,borns,ret_saveamp,ivec,ifks)
             DO I=1,NSQAMPSO
                 ANS(1,I)=ANS(1,I)+T(1,I)
                 ANS(2,I)=ANS(2,I)+T(2,I)
@@ -793,7 +795,7 @@ C      endif
       END
 
 
-      SUBROUTINE SBORN_SPLITORDERS_NTRY(P1,AMP2,JAMP2,ANS,RET_SAVEAMP,DO_TRY)
+      recursive subroutine SBORN_SPLITORDERS_NTRY(P1,AMP2,JAMP2,ANS,RET_SAVEAMP,DO_TRY)
 C  
 %(info_lines)s
 C
@@ -803,6 +805,7 @@ C FOR THE POINT IN PHASE SPACE P1(0:3,NEXTERNAL-1)
 C  
 %(process_lines)s
 C
+      use driver_vec
       IMPLICIT NONE
 C  
 C CONSTANTS
@@ -859,6 +862,9 @@ C BEGIN CODE
 C ----------
       iden=iden_values(nfksprocess)
       glu_ij = ij_values(nfksprocess)
+      do i=1, driver_vector_size
+            nhel_vec(:,1:NCOMB,i)=nhel(:,:)
+      enddo
       NTRY(nFKSprocess)=NTRY(nFKSprocess)+1
       if (glu_ij.eq.0) then
             skip(nfksprocess)=0
@@ -931,7 +937,7 @@ C ----------
       END
 
 
-      SUBROUTINE SBORN_SPLITORDERS_NTRY_VEC(P1,AMP2,JAMP2,ANS,RET_SAVEAMP,DO_TRY,IVEC,IFKS)
+      recursive subroutine SBORN_SPLITORDERS_NTRY_VEC(P1,AMP2,JAMP2,ANS,RET_SAVEAMP,DO_TRY,IVEC,IFKS)
 C  
 %(info_lines)s
 C
@@ -1070,7 +1076,7 @@ C      calculatedBorn=.true.
       END
        
        
-      SUBROUTINE BORN(P,NHEL,HELL,force_ijglu_zero,amp2,jamp2,ANS,borns,ret_saveamp)
+      recursive subroutine BORN(P,NHEL,HELL,force_ijglu_zero,amp2,jamp2,ANS,borns,ret_saveamp)
 C  
 %(info_lines)s
 C RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
@@ -1267,7 +1273,7 @@ C        ret_saveamp(:,:) = saveamp(:,:)
 
 
 
-      SUBROUTINE BORN_VEC(P,NHEL,HELL,force_ijglu_zero,amp2,jamp2,ANS,borns,ret_saveamp,ivec,ifks)
+      recursive subroutine BORN_VEC(P,NHEL,HELL,force_ijglu_zero,amp2,jamp2,ANS,borns,ret_saveamp,ivec,ifks)
 C  
 %(info_lines)s
 C RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
@@ -1348,7 +1354,7 @@ C ----------
       borns(1,0)=0d0
       borns(2,0)=0d0
       if (glu_ij.ne.0) then
-        back_hel = nhel(glu_ij)
+        back_hel = NHEL(glu_ij)
         if (back_hel.ne.0) then
           step_hel=-2*back_hel
         else
@@ -1366,7 +1372,7 @@ C ----------
         endif
         IF (cond_ij) THEN
         if (glu_ij.ne.0) then
-          if (nhel(glu_ij).ne.0) nhel(glu_ij) = ihel
+          if (NHEL(glu_ij).ne.0) NHEL(glu_ij) = ihel
         endif
 C        if (.not. calculatedBorn) then
 C        if(ihel.eq.back_hel)then
@@ -1452,7 +1458,7 @@ C        endif
       ANS(2,SQSOINDEXB(M,N))= ANS(2,SQSOINDEXB(M,N))/(2d0*DENOM)
       ENDDO
       ENDDO
-      if (glu_ij.ne.0) nhel(glu_ij) = back_hel
+      if (glu_ij.ne.0) NHEL(glu_ij) = back_hel
       END
 
       BLOCK DATA GOODHELS
@@ -1467,11 +1473,8 @@ C        endif
 
 
 
-C
-C Helper functions to deal with the split orders.
-C
 
-      INTEGER FUNCTION SQSOINDEXB(AMPORDERA,AMPORDERB)
+      RECURSIVE INTEGER FUNCTION SQSOINDEXB(AMPORDERA,AMPORDERB)
 C
 C This functions plays the role of the interference matrix. It can be hardcoded or 
 C made more elegant using hashtables if its execution speed ever becomes a relevant
@@ -1510,7 +1513,7 @@ C
 
 
 
-      INTEGER FUNCTION SQSOINDEXB_FROM_ORDERS(ORDERS)
+      RECURSIVE INTEGER FUNCTION SQSOINDEXB_FROM_ORDERS(ORDERS)
 C
 C From a list of values for the split orders, this function returns the
 c corresponding index in the squared orders canonical ordering.
@@ -1550,7 +1553,7 @@ C
 
 
 
-      INTEGER FUNCTION GETORDPOWFROMINDEX_B(IORDER, INDX)
+      RECURSIVE INTEGER FUNCTION GETORDPOWFROMINDEX_B(IORDER, INDX)
 C
 C Return the power of the IORDER-th order appearing at position INDX
 C in the split-orders output
@@ -1589,9 +1592,9 @@ C
       END
 
 
-      SUBROUTINE GET_NSQSO_B(NSQSO)
+      recursive subroutine GET_NSQSO_B(NSQSO)
 C
-C     Simple subroutine returning the number of squared split order
+C     Simple recursive subroutine returning the number of squared split order
 C     contributions returned in ANS when calling SMATRIX_SPLITORDERS
 C
       implicit none

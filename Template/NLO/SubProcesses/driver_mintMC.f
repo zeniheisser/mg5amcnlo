@@ -148,7 +148,7 @@ c
       vector_size_wgt = vector_size
 
       
-!$ call omp_set_num_thread(vector_size)
+! call omp_set_num_thread(vector_size)
 
       call setrun                !Sets up run parameters
       call setpara('param_card.dat')   !Sets up couplings and masses
@@ -1401,6 +1401,8 @@ c "npNLO".
          call setup_event_attributes
          ! call allocate_couplings(4*FKS_configs + 1)
          ! call allocate_storage(1)
+         goodhel_set=.false.
+         goodhel_calls=0
       endif
 
       if (ifl.eq.0) then
@@ -1464,11 +1466,12 @@ c The nbody contributions
             nFKS_picked_nbody=nFKS_out
          endif
 
-
+!omp parallel do
          do ivec=1,vector_size
             call amplitudes_ivec(proc_map,rwgt,vector_size
      $            ,nFKS_picked_nbody,ivec)
          enddo
+!omp end parallel do
 
          
       do ivec=1,vector_size

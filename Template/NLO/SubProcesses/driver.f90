@@ -16,6 +16,8 @@ module driver_vec
   logical, allocatable, public :: passcuts_nbody_vec(:,:)
   logical, allocatable, public :: passcuts_n1body_vec(:,:)
   double precision, allocatable, public :: virt_wgt_vec(:,:), born_wgt_vec(:,:)
+ ! born helicities
+  integer, allocatable, public :: nhel_vec(:,:,:)
   ! n-body kinematics Borns
   double precision, allocatable, public :: snb_amp2(:,:,:)
   double precision, allocatable, public :: snb_jamp2(:,:,:)
@@ -95,8 +97,10 @@ module driver_vec
     allocate(passcuts_nbody_vec(FKS_configs,vector_size))
     allocate(passcuts_n1body_vec(FKS_configs,vector_size))
     ! Virtual and born weights for MINT
-    allocate(virt_wgt_vec(n_ave_virt,vector_size))
-    allocate(born_wgt_vec(n_ave_virt,vector_size))
+    allocate(virt_wgt_vec(0:n_ave_virt,vector_size))
+    allocate(born_wgt_vec(0:n_ave_virt,vector_size))
+    ! born helicities
+    allocate(nhel_vec(nexternal-1,max_bhel,vector_size))
    ! n-body kinematics Borns
    allocate(snb_amp2(ngraphs,FKS_configs,vector_size))
    allocate(snb_jamp2(0:ncolor,FKS_configs,vector_size))
@@ -150,7 +154,7 @@ module driver_vec
     allocate(spb_ev(0:3,nexternal-1,FKS_configs,vector_size))
     allocate(spb_norad(0:3,nexternal-1,FKS_configs,vector_size))
     allocate(sp1_cnt(0:3,nexternal,0:FKS_configs,vector_size))
-    allocate(sp1(0:3,0:nexternal,FKS_configs,vector_size))
+    allocate(sp1(0:3,nexternal,FKS_configs,vector_size))
     driver_is_allocated = .true.
 end subroutine allocate_storage
 
@@ -232,6 +236,10 @@ subroutine deallocate_storage()
     if (allocated(passcuts_born_vec)) deallocate(passcuts_born_vec)
     if (allocated(passcuts_nbody_vec)) deallocate(passcuts_nbody_vec)
     if (allocated(passcuts_n1body_vec)) deallocate(passcuts_n1body_vec)
+    if (allocated(virt_wgt_vec)) deallocate(virt_wgt_vec)
+    if (allocated(born_wgt_vec)) deallocate(born_wgt_vec)
+  ! born helicities
+    if (allocated(nhel_vec)) deallocate(nhel_vec)
     ! n-body kinematics Borns
     if (allocated(snb_amp2)) deallocate(snb_amp2)
     if (allocated(snb_jamp2)) deallocate(snb_jamp2)
