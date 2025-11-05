@@ -2134,6 +2134,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                         job['mint_mode']=0
                         job['run_mode']=run_mode
                         job['wgt_frac']=1.0
+                        job['vecsize']=1
                         jobs_to_run.append(job)
             jobs_to_collect=copy.copy(jobs_to_run) # These are all jobs
         else:
@@ -2229,6 +2230,7 @@ RESTART = %(mint_mode)s
 %(mint_mode)s          ! MINT imode: 0 to set-up grids, 1 to perform integral, 2 generate events
 %(fold_string)s      ! if imode is 1: Folding parameters for xi_i, y_ij and phi_i
 %(run_mode)s        ! all, born, real, virt
+%(vecsize)s        ! vector size
 """ \
                     % job
         with open(pjoin(job['dirname'], 'input_app.txt'), 'w') as input_file:

@@ -145,7 +145,6 @@ c
       enddo
 
       vector_size = 1
-      vector_size_wgt = vector_size
 
       
 ! call omp_set_num_thread(vector_size)
@@ -157,16 +156,13 @@ c
       call run_printout          !Prints out a summary of the run settings
       call fill_configurations_common
       call check_amp_split 
-      if(.not.driver_is_allocated) 
-     $  call allocate_storage(vector_size,ndimmax,max_fold,nintegrals,n_ave_virt)
-      if(.not.couplings_is_allocated)
-     $  call allocate_couplings(vector_size*(4*FKS_configs + 1))
 c     
 c     Get user input
 c
       write(*,*) "getting user params"
       call get_user_params(ncalls0,itmax,
-     &     ixi_i,iphi_i,iy_ij,SHsep)
+     &     ixi_i,iphi_i,iy_ij,SHsep
+     &     ,vector_size)
 c Only do the reweighting when actually generating the events
       if (imode.eq.2) then
          doreweight=do_rwgt_scale.or.do_rwgt_pdf.or.store_rwgt_info
@@ -180,6 +176,11 @@ c Only do the reweighting when actually generating the events
       else
          only_virt=.false.
       endif
+      if(.not.driver_is_allocated) 
+     $  call allocate_storage(vector_size,ndimmax,max_fold,nintegrals,n_ave_virt)
+      if(.not.couplings_is_allocated)
+     $  call allocate_couplings(vector_size*(4*FKS_configs + 1))
+      vector_size_wgt = vector_size
 
       if(imode.eq.0)then
         flat_grid=.true.
@@ -336,11 +337,13 @@ c Randomly pick the contribution that will be written in the event file
             call finalize_event(x_save_vec(1,ifold_picked,ivec),weight,lunlhe
      $           ,putonshell, ivec)
          enddo
-         call deallocate_weight_lines
          vn=-1
          call gen_vec(sigintF_vec,3,vn) ! print counters generation efficiencies
          write (lunlhe,'(a)') "</LesHouchesEvents>"
          close(lunlhe)
+         call deallocate_weight_lines
+         call deallocate_storage
+         call deallocate_couplings
       endif
 
       if(i_momcmp_count.ne.0)then
@@ -461,7 +464,8 @@ c timing statistics
 
 
       subroutine get_user_params(ncall,nitmax,
-     &     ixi_i,iphi_i,iy_ij,SHsep)
+     &     ixi_i,iphi_i,iy_ij,SHsep
+     &     ,vector_size)
 c**********************************************************************
 c     Routine to get user specified parameters for run
 c**********************************************************************
@@ -479,6 +483,7 @@ c
 c     Arguments
 c
       integer ncall,nitmax
+      integer vector_size
 c
 c     Local
 c
@@ -671,6 +676,13 @@ c$$$            endif
      &     .and. abrv.ne.'grid')then
         write(*,*)'Error in driver: inconsistent input',abrvinput
         stop
+      endif
+
+      write(*,*) "Set the vector size, i.e. number of phase space points evaluated per call to the differential cross section:"
+      read(*,*) vector_size
+      if(vector_size.lt.1) then
+         write(*,*) 'Error: vector size must be a positive integer. Setting it to 1.'
+         vector_size=1
       endif
 
       write (*,*) "doing the ",abrv," of this channel"
