@@ -25,6 +25,7 @@ module driver_vec
   double precision, allocatable, public :: snb_amp_split(:,:,:)
   double complex, allocatable, public :: snb_amp_split_cnt(:,:,:,:,:)
   double complex, allocatable, public :: snb_saveamp(:,:,:,:)
+  double precision, allocatable, public :: snb_split_soft(:,:,:)
   double precision, allocatable, public :: swgt_nb(:,:)
   ! n+1-body kinematics Borns
   double precision, allocatable, public :: sn1_amp2(:,:,:)
@@ -33,6 +34,7 @@ module driver_vec
   double precision, allocatable, public :: sn1_amp_split(:,:,:)
   double complex, allocatable, public :: sn1_amp_split_cnt(:,:,:,:,:)
   double complex, allocatable, public :: sn1_saveamp(:,:,:,:)
+  double precision, allocatable, public :: sn1_split_soft(:,:,:)
   double precision, allocatable, public :: swgt_n1(:,:)
   !Store storage for born-like collinears
     complex*16, allocatable, public :: scb_ans_cnt(:,:,:,:)
@@ -60,6 +62,7 @@ module driver_vec
     double precision, allocatable, public :: sborn_amp_split(:,:)
     double complex, allocatable, public :: sborn_amp_split_cnt(:,:,:,:)
     double complex, allocatable, public :: sborn_saveamp(:,:,:)
+    double precision, allocatable, public :: sborn_split_soft(:,:)
     double precision, allocatable, public :: swgt_born(:)
 ! Real amplitudes and weights
     double precision, allocatable, public :: sreal_amp_split(:,:,:)
@@ -69,7 +72,7 @@ module driver_vec
 
     double precision, allocatable, public :: spb(:,:,:,:), spb_rot(:,:,:,:)
     double precision, allocatable, public :: spb_coll(:,:,:,:), spb_ev(:,:,:,:)
-    double precision, allocatable, public :: spb_norad(:,:,:,:), sp1_cnt(:,:,:,:)
+    double precision, allocatable, public :: spb_norad(:,:,:,:), sp1_cnt(:,:,:,:,:)
     double precision, allocatable, public :: sp1(:,:,:,:)
 
     public :: allocate_storage, reset_storage, deallocate_storage
@@ -108,6 +111,7 @@ module driver_vec
    allocate(snb_amp_split(amp_split_size,FKS_configs,vector_size))
    allocate(snb_amp_split_cnt(amp_split_size,2,nsplitorders,FKS_configs,vector_size))
    allocate(snb_saveamp(ngraphs,max_bhel,FKS_configs,vector_size))
+   allocate(snb_split_soft(amp_split_size,FKS_configs,vector_size))
    allocate(swgt_nb(FKS_configs,vector_size))
    ! n+1-body kinematics Borns
    allocate(sn1_amp2(ngraphs,FKS_configs,vector_size))
@@ -116,6 +120,7 @@ module driver_vec
    allocate(sn1_amp_split(amp_split_size,FKS_configs,vector_size))
    allocate(sn1_amp_split_cnt(amp_split_size,2,nsplitorders,FKS_configs,vector_size))
    allocate(sn1_saveamp(ngraphs,max_bhel,FKS_configs,vector_size))
+    allocate(sn1_split_soft(amp_split_size,FKS_configs,vector_size))
    allocate(swgt_n1(FKS_configs,vector_size))
    ! Store storage for born-like collinears
     allocate(scb_ans_cnt(2,nsplitorders,FKS_configs,vector_size))
@@ -143,6 +148,7 @@ module driver_vec
     allocate(sborn_amp_split(amp_split_size,vector_size))
     allocate(sborn_amp_split_cnt(amp_split_size,2,nsplitorders,vector_size))
     allocate(sborn_saveamp(ngraphs,max_bhel,vector_size))
+    allocate(sborn_split_soft(amp_split_size,vector_size))
     allocate(swgt_born(vector_size))
     ! Reals
     allocate(sreal_amp_split(amp_split_size,FKS_configs,vector_size))
@@ -153,7 +159,7 @@ module driver_vec
     allocate(spb_coll(0:3,nexternal-1,FKS_configs,vector_size))
     allocate(spb_ev(0:3,nexternal-1,FKS_configs,vector_size))
     allocate(spb_norad(0:3,nexternal-1,FKS_configs,vector_size))
-    allocate(sp1_cnt(0:3,nexternal,0:FKS_configs,vector_size))
+    allocate(sp1_cnt(0:3,nexternal,-2:2,0:FKS_configs,vector_size))
     allocate(sp1(0:3,nexternal,FKS_configs,vector_size))
     driver_is_allocated = .true.
 end subroutine allocate_storage
@@ -172,6 +178,7 @@ subroutine reset_storage()
    snb_amp_split(:,:,:) = 0d0
    snb_amp_split_cnt(:,:,:,:,:) = (0d0,0d0)
    snb_saveamp(:,:,:,:) = (0d0,0d0)
+    snb_split_soft(:,:,:) = 0d0
    swgt_nb(:,:) = 0d0
    ! n+1-body kinematics Borns
    sn1_amp2(:,:,:) = 0d0
@@ -180,6 +187,7 @@ subroutine reset_storage()
    sn1_amp_split(:,:,:) = 0d0
    sn1_amp_split_cnt(:,:,:,:,:) = (0d0,0d0)
    sn1_saveamp(:,:,:,:) = (0d0,0d0)
+    sn1_split_soft(:,:,:) = 0d0
    swgt_n1(:,:) = 0d0
    ! Store storage for born-like collinears
     scb_ans_cnt(:,:,:,:) = (0d0,0d0)
@@ -207,6 +215,7 @@ subroutine reset_storage()
     sborn_amp_split(:,:) = 0d0
     sborn_amp_split_cnt(:,:,:,:) = (0d0,0d0)
     sborn_saveamp(:,:,:) = (0d0,0d0)
+    sborn_split_soft(:,:) = 0d0
     swgt_born(:) = 0d0
 ! Real amplitudes and weights
     sreal_amp_split(:,:,:) = 0d0
@@ -217,7 +226,7 @@ subroutine reset_storage()
     spb_coll(:,:,:,:) = 0d0
     spb_ev(:,:,:,:) = 0d0
     spb_norad(:,:,:,:) = 0d0
-    sp1_cnt(:,:,:,:) = 0d0
+    sp1_cnt(:,:,:,:,:) = 0d0
     sp1(:,:,:,:) = 0d0
 end subroutine reset_storage
 
@@ -247,6 +256,7 @@ subroutine deallocate_storage()
     if (allocated(snb_amp_split)) deallocate(snb_amp_split)
     if (allocated(snb_amp_split_cnt)) deallocate(snb_amp_split_cnt)
     if (allocated(snb_saveamp)) deallocate(snb_saveamp)
+    if (allocated(snb_split_soft)) deallocate(snb_split_soft)
     if (allocated(swgt_nb)) deallocate(swgt_nb)
     ! n+1-body kinematics Borns
     if (allocated(sn1_amp2)) deallocate(sn1_amp2)
@@ -255,6 +265,7 @@ subroutine deallocate_storage()
     if (allocated(sn1_amp_split)) deallocate(sn1_amp_split)
     if (allocated(sn1_amp_split_cnt)) deallocate(sn1_amp_split_cnt)
     if (allocated(sn1_saveamp)) deallocate(sn1_saveamp)
+    if (allocated(sn1_split_soft)) deallocate(sn1_split_soft)
     if (allocated(swgt_n1)) deallocate(swgt_n1)
     ! Store storage for born-like collinears
     if (allocated(scb_ans_cnt)) deallocate(scb_ans_cnt)
@@ -282,6 +293,7 @@ subroutine deallocate_storage()
     if (allocated(sborn_amp_split)) deallocate(sborn_amp_split)
     if (allocated(sborn_amp_split_cnt)) deallocate(sborn_amp_split_cnt)
     if (allocated(sborn_saveamp)) deallocate(sborn_saveamp)
+    if (allocated(sborn_split_soft)) deallocate(sborn_split_soft)
     if (allocated(swgt_born)) deallocate(swgt_born)
 ! Real amplitudes and weights
     if (allocated(sreal_amp_split)) deallocate(sreal_amp_split)

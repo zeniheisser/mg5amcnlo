@@ -85,7 +85,7 @@ c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
          call set_alphaS(p1_cnt(0,1,0))
          call set_alphaS_vec(p1_cnt(0,1,0),indent + coup_step)
          spb(:,:,0,ivec) = p_born(:,:)
-         sp1_cnt(:,:,0,ivec) = p1_cnt(:,:,0)
+         sp1_cnt(:,:,:,0,ivec) = p1_cnt(:,:,:)
          passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
          passcuts_born_vec(ivec)=passcuts_nbody
          nbody=.false.
@@ -122,7 +122,7 @@ c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
                p_born_rot(3,k)=-p_born(3,k)
             enddo
             spb_rot(:,:,iFKS,ivec) = p_born_rot(:,:)
-            sp1_cnt(:,:,iFKS,ivec) = p1_cnt(:,:,0)
+            sp1_cnt(:,:,:,iFKS,ivec) = p1_cnt(:,:,:)
             spb_coll(:,:,iFKS,ivec) = p_born_coll(:,:)
             call set_alphaS(p)
             call set_alphaS_vec(p,icoup + 3)
@@ -215,7 +215,7 @@ c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
          call set_alphaS(p1_cnt(0,1,0))
          call set_alphaS_vec(p1_cnt(0,1,0),indent + coup_step)
          spb(:,:,0,ivec) = p_born(:,:)
-         sp1_cnt(:,:,0,ivec) = p1_cnt(:,:,0)
+         sp1_cnt(:,:,:,0,ivec) = p1_cnt(:,:,:)
          passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
          passcuts_born_vec(ivec)=passcuts_nbody
          nbody=.false.
@@ -252,7 +252,7 @@ c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
                p_born_rot(3,k)=-p_born(3,k)
             enddo
             spb_rot(:,:,iFKS,ivec) = p_born_rot(:,:)
-            sp1_cnt(:,:,iFKS,ivec) = p1_cnt(:,:,0)
+            sp1_cnt(:,:,:,iFKS,ivec) = p1_cnt(:,:,:)
             spb_coll(:,:,iFKS,ivec) = p_born_coll(:,:)
             call set_alphaS(p)
             call set_alphaS_vec(p,icoup + 3)
@@ -262,7 +262,7 @@ c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
       return
       end
 
-      subroutine set_goodhel(nndim,iconfig)
+      subroutine set_goodhel(nndim,iconfig,goodhel_calls,ntry_goodhel,goodhel_set)
 C For each FKS config, generates momenta and calls sborn_amp and smatrix_real
 C which have write-access to the GOODHEL arrays, while the vectorised routines do not
          use driver_vec
@@ -278,6 +278,8 @@ C which have write-access to the GOODHEL arrays, while the vectorised routines d
          integer nndim, iconfig         
          logical calculatedBorn
          common/ccalculatedBorn/calculatedBorn
+         integer goodhel_calls(FKS_configs)
+         integer ntry_goodhel
          double precision p_born(0:3,nexternal-1), p(0:3,nexternal)
          common /pborn/   p_born
          integer              nFKSprocess
@@ -285,10 +287,13 @@ C which have write-access to the GOODHEL arrays, while the vectorised routines d
          integer iFKS, k, ivec, save_nFKSprocess
          double precision dummy_jac, dummy_ans, dummy_amp_split(amp_split_size)
          double precision x(99)
+         integer n_points
+         logical goodhel_set
 
          save_nFKSprocess = nFKSprocess
          dummy_jac=1d0
-         do ivec=1,driver_vector_size
+         n_points = min(driver_vector_size, ntry_goodhel)
+         do ivec=1,n_points
            x(:) = x_vegas_vec(:,ivec)
            do nFKSprocess=1,FKS_configs
              call update_fks_dir(nFKSprocess)
@@ -296,8 +301,10 @@ C which have write-access to the GOODHEL arrays, while the vectorised routines d
              calculatedBorn=.false.
              call sborn(p_born, dummy_ans)
              call smatrix_real(p, dummy_amp_split, dummy_ans)
+             goodhel_calls(nFKSprocess) = goodhel_calls(nFKSprocess) + 1
            enddo
           enddo
+          if(goodhel_calls(1).ge.ntry_goodhel) goodhel_set = .true.
          nFKSprocess = save_nFKSprocess
       end
 
@@ -422,7 +429,7 @@ C            call update_fks_dir(iFKS)
             p_born_norad(:,:)=spb_norad(:,:,iFKS,ivec)
             p_born_coll(:,:)=spb_coll(:,:,iFKS,ivec)
             p_born_rot(:,:)=spb_rot(:,:,iFKS,ivec)
-            p1_cnt(:,:,0)=sp1_cnt(:,:,iFKS,ivec)
+            p1_cnt(:,:,:)=sp1_cnt(:,:,:,iFKS,ivec)
             p(:,:) =sp1(:,:,iFKS,ivec)
             if (p_born(0,1).lt.0d0) cycle
             passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
@@ -491,7 +498,7 @@ C            call update_fks_dir(iFKS)
 
 c Pick the first one because that's the one with the soft singularity
          p_born(:,:) = spb(:,:,0,ivec)
-         p1_cnt(:,:,0) = sp1_cnt(:,:,0,ivec)
+         p1_cnt(:,:,:) = sp1_cnt(:,:,:,0,ivec)
          if (p_born(0,1).lt.0d0) skip_iter = .true.
          ! skip_iter_vec(ivec) = skip_iter
             if (skip_iter) cycle
@@ -629,7 +636,7 @@ C Local parameters
             p_born_norad(:,:)=spb_norad(:,:,iFKS,ivec)
             p_born_coll(:,:)=spb_coll(:,:,iFKS,ivec)
             p_born_rot(:,:)=spb_rot(:,:,iFKS,ivec)
-            p1_cnt(:,:,0)=sp1_cnt(:,:,iFKS,ivec)
+            p1_cnt(:,:,:)=sp1_cnt(:,:,:,iFKS,ivec)
             p(:,:) =sp1(:,:,iFKS,ivec)
             if (p_born(0,1).lt.0d0) cycle
             passcuts_nbody=passcuts_nbody_vec(iFKS,ivec)
@@ -698,7 +705,7 @@ C Local parameters
 
 c Pick the first one because that's the one with the soft singularity
          p_born(:,:) = spb(:,:,0,ivec)
-         p1_cnt(:,:,0) = sp1_cnt(:,:,0,ivec)
+         p1_cnt(:,:,:) = sp1_cnt(:,:,:,0,ivec)
          ! if (p_born(0,1).lt.0d0) return
          ! skip_iter_vec(ivec) = skip_iter
             ! if (skip_iter) cycle

@@ -147,7 +147,6 @@ c
       vector_size = 1
 
       
-! call omp_set_num_thread(vector_size)
 
       call setrun                !Sets up run parameters
       call setpara('param_card.dat')   !Sets up couplings and masses
@@ -181,6 +180,8 @@ c Only do the reweighting when actually generating the events
       if(.not.couplings_is_allocated)
      $  call allocate_couplings(vector_size*(4*FKS_configs + 1))
       vector_size_wgt = vector_size
+      
+!call omp_set_num_thread(vector_size)
 
       if(imode.eq.0)then
         flat_grid=.true.
@@ -400,7 +401,7 @@ c Randomly pick the contribution that will be written in the event file
       tTot = tAfter-tBefore
       tOther = tTot - (tBorn+tGenPS+tReal+tCount+tIS+tFxFx+tf_nb+tf_all
      $     +t_as+tr_s+tr_pdf+t_plot+t_cuts+t_MC_subt+t_isum+t_p_unw
-     $     +t_write+t_coupl)
+     $     +t_write+t_coupl+t_vecamp)
       write(*,*) 'Time spent in Born : ',tBorn
       write(*,*) 'Time spent in PS_Generation : ',tGenPS
       write(*,*) 'Time spent in Reals_evaluation: ',tReal
@@ -420,6 +421,7 @@ c Randomly pick the contribution that will be written in the event file
       write(*,*) 'Time spent in Pick_unwgt : ',t_p_unw
       write(*,*) 'Time spent in Write_events : ',t_write
       write(*,*) 'Time spent in AlphaS_dependencies : ',t_coupl
+      write(*,*) 'Time spent in Vector_amplitude : ',t_vecamp
       write(*,*) 'Time spent in Other_tasks : ',tOther
       write(*,*) 'Time spent in Total : ',tTot
 
@@ -460,6 +462,7 @@ c timing statistics
       data t_p_unw/0.0/
       data t_write/0.0/
       data t_coupl/0.0/
+      data t_vecamp/0.0/
       end
 
 
@@ -1372,7 +1375,7 @@ C Real deg amplitudes
       logical skip_iter
 
       logical, save :: goodhel_set
-      integer, save :: goodhel_calls
+      integer, save :: goodhel_calls(FKS_configs)
       integer ntry_goodhel
       data ntry_goodhel /20/
 
@@ -1457,9 +1460,7 @@ C ZW: Reset all the storage arrays
          call reset_storage()
 
          if(.not.goodhel_set) then
-            call set_goodhel(nndim,iconfig)
-            goodhel_calls=goodhel_calls+vector_size
-            if (goodhel_calls.ge.ntry_goodhel) goodhel_set=.true.
+            call set_goodhel(nndim,iconfig,goodhel_calls,ntry_goodhel,goodhel_set)
          end if
 
          call generate_momenta_vector(iconfig,sum,proc_map
