@@ -86,6 +86,7 @@ c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
          call set_alphaS_vec(p1_cnt(0,1,0),indent + coup_step)
          spb(:,:,0,ivec) = p_born(:,:)
          sp1_cnt(:,:,:,0,ivec) = p1_cnt(:,:,:)
+         call set_cms_stuff(izero)
          passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
          passcuts_born_vec(ivec)=passcuts_nbody
          nbody=.false.
@@ -100,10 +101,12 @@ c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
             if (p_born(0,1).lt.0d0) cycle
             ! call set_cms_stuff(izero)
             ! if (ickkw.eq.3) call set_FxFx_scale(-2,p1_cnt(0,1,0),nFKSprocess)
+            call set_cms_stuff(izero)
             passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
             passcuts_nbody_vec(iFKS,ivec)=passcuts_nbody
             ! call set_cms_stuff(mohdr)
             ! if (ickkw.eq.3) call set_FxFx_scale(-3,p,nFKSprocess)
+            call set_cms_stuff(mohdr)
             passcuts_n1body=passcuts(p,rwgt)
             passcuts_n1body_vec(iFKS,ivec)=passcuts_n1body
             call set_alphaS(p_born_ev)
@@ -210,6 +213,7 @@ c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
          nbody=.true.
          call update_fks_dir(nFKS_picked_nbody)
          dummy_jac=1d0
+         call set_cms_stuff(izero)
          call generate_momenta(nndim,iconfig,dummy_jac,x,p)
         !  if (p_born(0,1).lt.0d0) goto 12
          call set_alphaS(p1_cnt(0,1,0))
@@ -228,11 +232,11 @@ c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
             ! icolup_s(1,1)=-1    ! set colour connection to -1: i.e., complete_xmcsubt has not been called
             call generate_momenta(nndim,iconfig,dummy_jac,x,p)
             if (p_born(0,1).lt.0d0) cycle
-            ! call set_cms_stuff(izero)
+            call set_cms_stuff(izero)
             ! if (ickkw.eq.3) call set_FxFx_scale(-2,p1_cnt(0,1,0),nFKSprocess)
             passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
             passcuts_nbody_vec(iFKS,ivec)=passcuts_nbody
-            ! call set_cms_stuff(mohdr)
+            call set_cms_stuff(mohdr)
             ! if (ickkw.eq.3) call set_FxFx_scale(-3,p,nFKSprocess)
             passcuts_n1body=passcuts(p,rwgt)
             passcuts_n1body_vec(iFKS,ivec)=passcuts_n1body
@@ -289,6 +293,11 @@ C which have write-access to the GOODHEL arrays, while the vectorised routines d
          double precision x(99)
          integer n_points
          logical goodhel_set
+      double precision    xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3)
+     $                    ,p_i_fks_cnt(0:3,-2:2)
+      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+         double precision tiny
+         parameter (tiny=1d-6)
 
          save_nFKSprocess = nFKSprocess
          dummy_jac=1d0
@@ -300,11 +309,13 @@ C which have write-access to the GOODHEL arrays, while the vectorised routines d
              call generate_momenta(nndim,iconfig,dummy_jac,x,p)
              calculatedBorn=.false.
              call sborn(p_born, dummy_ans)
+             if (1d0-y_ij_fks_ev.lt.tiny.or.xi_i_fks_ev.lt.tiny) cycle
              call smatrix_real(p, dummy_amp_split, dummy_ans)
              goodhel_calls(nFKSprocess) = goodhel_calls(nFKSprocess) + 1
            enddo
           enddo
-          if(goodhel_calls(1).ge.ntry_goodhel) goodhel_set = .true.
+          n_points = minval(goodhel_calls)
+          if(n_points.ge.ntry_goodhel) goodhel_set = .true.
          nFKSprocess = save_nFKSprocess
       end
 
