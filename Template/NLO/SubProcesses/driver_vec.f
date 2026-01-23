@@ -266,7 +266,7 @@ c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
       return
       end
 
-      subroutine set_goodhel(nndim,iconfig,goodhel_calls,ntry_goodhel,goodhel_set)
+      subroutine set_goodhel(nndim,iconfig,goodhel_calls,ntry_goodhel,proc_map,goodhel_set)
 C For each FKS config, generates momenta and calls sborn_amp and smatrix_real
 C which have write-access to the GOODHEL arrays, while the vectorised routines do not
          use driver_vec
@@ -288,7 +288,8 @@ C which have write-access to the GOODHEL arrays, while the vectorised routines d
          common /pborn/   p_born
          integer              nFKSprocess
          common/c_nFKSprocess/nFKSprocess
-         integer iFKS, k, ivec, save_nFKSprocess
+         integer iFKS, k, ivec, save_nFKSprocess, i
+        integer proc_map(0:fks_configs,0:fks_configs)
          double precision dummy_jac, dummy_ans, dummy_amp_split(amp_split_size)
          double precision x(99)
          integer n_points
@@ -299,24 +300,25 @@ C which have write-access to the GOODHEL arrays, while the vectorised routines d
          double precision tiny
          parameter (tiny=1d-6)
 
-         save_nFKSprocess = nFKSprocess
+         ! save_nFKSprocess = nFKSprocess
          dummy_jac=1d0
          n_points = min(driver_vector_size, ntry_goodhel)
          do ivec=1,n_points
            x(:) = x_vegas_vec(:,ivec)
-           do nFKSprocess=1,FKS_configs
-             call update_fks_dir(nFKSprocess)
+           do iFKS=1,FKS_configs
+               ! iFKS=proc_map(proc_map(0,1),i)
+             call update_fks_dir(iFKS)
              call generate_momenta(nndim,iconfig,dummy_jac,x,p)
              calculatedBorn=.false.
              call sborn(p_born, dummy_ans)
              if (1d0-y_ij_fks_ev.lt.tiny.or.xi_i_fks_ev.lt.tiny) cycle
              call smatrix_real(p, dummy_amp_split, dummy_ans)
-             goodhel_calls(nFKSprocess) = goodhel_calls(nFKSprocess) + 1
+             goodhel_calls(iFKS) = goodhel_calls(iFKS) + 1
            enddo
           enddo
           n_points = minval(goodhel_calls)
           if(n_points.ge.ntry_goodhel) goodhel_set = .true.
-         nFKSprocess = save_nFKSprocess
+         ! nFKSprocess = save_nFKSprocess
       end
 
       subroutine amplitudes_vec(proc_map,rwgt,vector_size,nFKS_nbody)

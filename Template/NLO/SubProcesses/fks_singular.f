@@ -1,5 +1,5 @@
 C      subroutine compute_born(p_born,ret_amp2,ret_jamp2,ret_amp_split,ret_amp_split_cnt,wgt_c,ret_ans_cnt,ret_saveamp)
-      subroutine compute_born(ret_amp_split)
+      subroutine compute_born(ret_amp_split,wgt_c)
 c This subroutine computes the Born matrix elements and adds its value
 c to the list of weights using the add_wgt subroutine
       use extra_weights
@@ -445,7 +445,7 @@ c     wgt3 : coefficient of the weight multiplying the log[mu_F^2/Q^2]
       subroutine compute_nbody_noborn(p,bsv_wgt,virt_wgt,born_wgt
      &           ,amp_split_virt,amp_split_born_for_virt,amp_split_avv
      &           ,amp_split_wgtnstmp,amp_split_wgtwnstmpmuf,amp_split_wgtwnstmpmur
-     &           ,born_split)
+     &           ,born_split,wgt_born)
 c This subroutine computes the soft-virtual matrix elements and adds its
 c value to the list of weights using the add_wgt subroutine
       use extra_weights
@@ -480,7 +480,7 @@ c value to the list of weights using the add_wgt subroutine
       double precision wgtal1,wgtal2,wgtal3
 
       double precision wgt1,wgt2,wgt3,bsv_wgt,virt_wgt,born_wgt,pi,g2
-     &     ,g22,wgt4
+     &     ,g22,wgt4,wgt_born
       parameter (pi=3.1415926535897932385d0)
       double precision p(0:3,nexternal)
    !    double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
@@ -522,7 +522,7 @@ C to make sure that it cannot be incorrectly understood.
          do i=1,nsplitorders
            orders(i)=-1
          enddo
-         call add_wgt(7,orders,-veto_compensating_factor*f_nb,0d0,0d0,born_wgt,0d0)
+         call add_wgt(7,orders,-veto_compensating_factor*f_nb,0d0,0d0,wgt_born,0d0)
         write(*,*) 'FIX VETOXSEC in FKS_EW'
         stop
       endif
@@ -556,8 +556,8 @@ C to make sure that it cannot be incorrectly understood.
            g2=g**(QCD_power-2)
            wgt1=wgt1 - fxfx_exp_rewgt*born_wgt*f_nb/g2/(4d0*pi)
         endif
-        call add_wgt(3,orders,wgt1,wgt2,wgt3,born_wgt,0d0)
-        call add_wgt(15,orders,wgt4,0d0,0d0,born_wgt,0d0)
+        call add_wgt(3,orders,wgt1,wgt2,wgt3,wgt_born,0d0)
+        call add_wgt(15,orders,wgt4,0d0,0d0,wgt_born,0d0)
       enddo
 c Special for the soft-virtual needed for the virt-tricks. The
 c *_wgt_mint variable should be directly passed to the mint-integrator
@@ -578,7 +578,7 @@ c and not be part of the plots nor computation of the cross section.
         born_wgt_mint(iamp)=born_wgt_mint(iamp)
      $       +amp_split_born_for_virt(iamp)*f_nb
         wgt1=wgt1/g**(QCD_power)
-        call add_wgt(14,orders,wgt1,0d0,0d0,born_wgt,0d0)
+        call add_wgt(14,orders,wgt1,0d0,0d0,wgt_born,0d0)
       enddo
 
 C This is the counterterm for the 6f->5f scheme change 
@@ -598,7 +598,7 @@ C of parton distributions (e.g. NNPDF2.3).
         wgt6f1=amp_split_6to5f(iamp)*f_nb/g**(qcd_power)
         wgt6f2=amp_split_6to5f_mur(iamp)*f_nb/g**(qcd_power)
         wgt6f3=amp_split_6to5f_muf(iamp)*f_nb/g**(qcd_power)
-        call add_wgt(3,orders,wgt6f1,wgt6f2,wgt6f3,born_wgt,0d0)
+        call add_wgt(3,orders,wgt6f1,wgt6f2,wgt6f3,wgt_born,0d0)
       enddo
 
 C This is the counterterm for the change of scheme
@@ -619,7 +619,7 @@ C wrt the hard matrix element. Relevant for lepton collisions.
         wgtal1=amp_split_alpha(iamp)*f_nb/g**(qcd_power)
         wgtal2=amp_split_alpha_mur(iamp)*f_nb/g**(qcd_power)
         wgtal3=amp_split_alpha_muf(iamp)*f_nb/g**(qcd_power)
-        call add_wgt(3,orders,wgtal1,wgtal2,wgtal3,born_wgt,0d0)
+        call add_wgt(3,orders,wgtal1,wgtal2,wgtal3,wgt_born,0d0)
       enddo
 
       call cpu_time(tAfter)
@@ -5146,7 +5146,6 @@ c has soft singularities
          endif
       else
 C         call smatrix_real(pp,ret_amp_split,wgt)
-         ret_amp_split(:) = real_amp_split(:)
          wgt=wgt*xi_i_fks**2*(1d0-y_ij_fks)
          ret_amp_split(1:amp_split_size) = ret_amp_split(1:amp_split_size)*xi_i_fks**2*(1d0-y_ij_fks)
       endif
@@ -7423,7 +7422,7 @@ c
       subroutine bornsoftvirtual(p,p_born,bsv_wgt,virt_wgt,born_wgt
      &           ,amp_split_virt,amp_split_born_for_virt,amp_split_avv
      &           ,amp_split_wgtnstmp,amp_split_wgtwnstmpmuf,amp_split_wgtwnstmpmur
-     &           ,born_wgt_arg,born_cnt,born_split_cnt,born_saveamp)
+     &           ,born_wgt_arg,born_cnt,born_split_cnt,born_saveamp,ret_amp_split)
       use extra_weights
       use mint_module
       implicit none
@@ -7445,7 +7444,7 @@ c      include "fks.inc"
       double precision pp(0:3,nexternal)
       
       double precision wgt1
-      double precision born_wgt_arg
+      double precision born_wgt_arg,wgt_born
       double precision rwgt,Q,Ej,wgt,contr,eikIreg,m1l_W_finite_CDR
       double precision aso2pi, aeo2pi
       double precision shattmp,dot
