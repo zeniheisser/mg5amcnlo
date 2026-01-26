@@ -5146,6 +5146,7 @@ c has soft singularities
          endif
       else
 C         call smatrix_real(pp,ret_amp_split,wgt)
+         ret_amp_split(:) = real_amp_split(:)
          wgt=wgt*xi_i_fks**2*(1d0-y_ij_fks)
          ret_amp_split(1:amp_split_size) = ret_amp_split(1:amp_split_size)*xi_i_fks**2*(1d0-y_ij_fks)
       endif
